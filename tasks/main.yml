@@ -1,66 +1,69 @@
 ---
-# tasks file for roles/backuppc-client/tasks/main.yml
+# tasks file for roles/backuppc-client
 
-- include: redhat.yml
-  when: ansible_os_family == 'RedHat'
+#- include: redhat.yml
+#  when: ansible_os_family == 'RedHat'
 - include: debian.yml
   when: ansible_os_family == 'Debian'
 
-- name: create backuppc users
-  sudo: yes
-  user: 
-    name: '{{backuppc_client_user}}'
-    shell: '/bin/bash' 
-    createhome: 'yes'
-    state: 'present'
-    home: '/var/lib/rsyncbackup'
-    comment: 'Backuppc User'
+- name: create backuppc user
+  user: >
+    name="{{ backuppc_client.username }}"
+    shell="{{ backuppc_client.shell }}"
+    createhome="yes"
+    state="present"
+    home="{{ backuppc_client.home }}"
+    comment="{{ backuppc_client.comment }}"
   tags: backuppc
-  
+
 - name: lock backuppc user account
-  sudo: yes
-  command: '/usr/bin/passwd -l {{backuppc_client_user}}'
+  command: "/usr/bin/passwd -l {{ backuppc_client.username }}"
+  register: result
+  failed_when: >
+      result.rc != 0
+  changed_when: >
+      result.rc == 0 and ("Do not report change every time" in result.stderr)
+  tags: backuppc
+
+- debug: msg='{{ backuppc_client.keys }}'
   tags: backuppc
   
 - name: set up authorized_keys
-  sudo: yes
-  authorized_key:
-    user: '{{backuppc_client_user}}'
-    state: 'present'
-    key: "{{lookup('file', 'roles/backuppc-client/files/authorized_keys')}}"
+  authorized_key: >
+    user="{{ backuppc_client.username }}"
+    state="present"
+    key='{{ backuppc_client.key }}'             # MUST be single quote, bug in ansible http://bit.ly/1HwqpaL
   tags: backuppc
   
 - name: copy sudoers file for safety
-  sudo: yes
-  command: /bin/cp -f /etc/sudoers /etc/sudoers.tmp
+  command: "/bin/cp -f /etc/sudoers /etc/sudoers.tmp"
+  failed_when: >
+      result.rc != 0
+  changed_when: >
+      result.rc == 0 and ("Do not report change every time" in result.stderr)
   tags: backuppc
   
 - name: add backuppc user to sudoers
-  sudo: yes
-  lineinfile: dest=/etc/sudoers.tmp state=present regexp='^rsyncbackup' line='rsyncbackup ALL=NOPASSWD:/usr/bin/rsync'
+  lineinfile: >
+      dest="/etc/sudoers.tmp"
+      state="present"
+      regexp="^rsyncbackup"
+      line="rsyncbackup ALL=NOPASSWD:/usr/bin/rsync"
   tags: backuppc
 
 - name: comment out Default requiretty in sudoers
-  sudo: yes
-  lineinfile: 
-    dest=/etc/sudoers.tmp 
-    state=present 
-    backrefs=yes
-    regexp='^Defaults(\s)+requiretty$' 
+  lineinfile: >
+    dest="/etc/sudoers.tmp"
+    state="present"
+    backrefs="yes"
+    regexp="^Defaults(\s)+requiretty$"
     line="#Defaults    requiretty"
   tags: backuppc
   
 - name: final sudoers file check
-  sudo: yes
-  shell: /usr/sbin/visudo -q -c -f /etc/sudoers.tmp && /bin/cp -f /etc/sudoers.tmp /etc/sudoers
-  tags: backuppc
-  
-- name: send email notification
-  local_action: mail
-    host='{{postfix_relayhost}}'
-    subject='Backuppc notification for {{fqdn}} {{ansible_default_ipv4.address}}'
-    body="{{lookup('file', 'roles/backuppc-client/files/email-body.txt')}}"
-    from='techs@real-time.com'
-    to='tanner@real-time.com'
-    headers=Reply-To="techs@real-time.com"
+  shell: "/usr/sbin/visudo -q -c -f /etc/sudoers.tmp && /bin/cp -f /etc/sudoers.tmp /etc/sudoers"
+  failed_when: >
+      result.rc != 0
+  changed_when: >
+      result.rc == 0 and ("Do not report change every time" in result.stderr)
   tags: backuppc
