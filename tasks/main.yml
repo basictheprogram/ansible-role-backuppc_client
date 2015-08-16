@@ -7,60 +7,65 @@
   when: ansible_os_family == 'Debian'
 
 - name: create backuppc users
-  sudo: yes
-  user: 
-    name: '{{backuppc_client_user}}'
-    shell: '/bin/bash' 
-    createhome: 'yes'
-    state: 'present'
-    home: '/var/lib/rsyncbackup'
-    comment: 'Backuppc User'
+  user: >
+    name="{{ backuppc_client_user }}"
+    shell="/bin/bash"
+    createhome="yes"
+    state="present"
+    home="{{ backuppc_client_home }}"
+    comment="{{ backuppc_client_comment }}"
   tags: backuppc
   
 - name: lock backuppc user account
-  sudo: yes
-  command: '/usr/bin/passwd -l {{backuppc_client_user}}'
+  command: "/usr/bin/passwd -l {{ backuppc_client_user }}"
+  register: result
+  failed_when: >
+      result.rc != 0
+  changed_when:
+      result.rc == 0 and ("Gonna always change" in result.stderr)
   tags: backuppc
   
 - name: set up authorized_keys
-  sudo: yes
-  authorized_key:
-    user: '{{backuppc_client_user}}'
-    state: 'present'
-    key: "{{lookup('file', 'roles/backuppc-client/files/authorized_keys')}}"
+  authorized_key: >
+    user="{{ backuppc_client_user }}"
+    state="present"
+    key_options="{{ backuppc_client_key_options }}"
+    key="{{ backuppc_client_authorized_keys|b64decode }}"
+    manage_dir="yes"
   tags: backuppc
   
 - name: copy sudoers file for safety
-  sudo: yes
-  command: /bin/cp -f /etc/sudoers /etc/sudoers.tmp
+  command: "/bin/cp -f /etc/sudoers /etc/sudoers.tmp"
+  register: result
+  failed_when: >
+      result.rc != 0
+  changed_when:
+      result.rc == 0 and ("Gonna always change" in result.stderr)
   tags: backuppc
   
 - name: add backuppc user to sudoers
-  sudo: yes
-  lineinfile: dest=/etc/sudoers.tmp state=present regexp='^rsyncbackup' line='rsyncbackup ALL=NOPASSWD:/usr/bin/rsync'
+  lineinfile: >
+      dest="/etc/sudoers.tmp" 
+      state="present"
+      regexp="^rsyncbackup" 
+      line="rsyncbackup ALL=NOPASSWD:/usr/bin/rsync"
   tags: backuppc
 
 - name: comment out Default requiretty in sudoers
-  sudo: yes
-  lineinfile: 
-    dest=/etc/sudoers.tmp 
-    state=present 
-    backrefs=yes
-    regexp='^Defaults(\s)+requiretty$' 
+  lineinfile: >
+    dest="/etc/sudoers.tmp"
+    state="present" 
+    backrefs="yes"
+    regexp="^Defaults(\s)+requiretty$"
     line="#Defaults    requiretty"
   tags: backuppc
   
 - name: final sudoers file check
-  sudo: yes
-  shell: /usr/sbin/visudo -q -c -f /etc/sudoers.tmp && /bin/cp -f /etc/sudoers.tmp /etc/sudoers
+  shell: "/usr/sbin/visudo -q -c -f /etc/sudoers.tmp && /bin/cp -f /etc/sudoers.tmp /etc/sudoers"
+  register: result
+  failed_when: >
+      result.rc != 0
+  changed_when: >
+      result.rc == 0 and ("Gonna always change" in result.stderr)
   tags: backuppc
   
-- name: send email notification
-  local_action: mail
-    host='{{postfix_relayhost}}'
-    subject='Backuppc notification for {{fqdn}} {{ansible_default_ipv4.address}}'
-    body="{{lookup('file', 'roles/backuppc-client/files/email-body.txt')}}"
-    from='techs@real-time.com'
-    to='tanner@real-time.com'
-    headers=Reply-To="techs@real-time.com"
-  tags: backuppc
