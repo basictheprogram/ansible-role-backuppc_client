@@ -24,15 +24,14 @@
   changed_when: >
       result.rc == 0 and ("Do not report change every time" in result.stderr)
   tags: backuppc
-
-- debug: msg='{{ backuppc_client.keys }}'
-  tags: backuppc
   
 - name: set up authorized_keys
   authorized_key: >
     user="{{ backuppc_client.username }}"
     state="present"
-    key='{{ backuppc_client.key }}'             # MUST be single quote, bug in ansible http://bit.ly/1HwqpaL
+    key_options="{{ backuppc_client_key_options }}"
+    key="{{ backuppc_client_authorized_keys|b64decode }}"
+    manage_dir="yes"
   tags: backuppc
   
 - name: copy sudoers file for safety
@@ -67,3 +66,4 @@
   changed_when: >
       result.rc == 0 and ("Do not report change every time" in result.stderr)
   tags: backuppc
+  

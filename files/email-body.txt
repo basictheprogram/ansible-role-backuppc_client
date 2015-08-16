@@ -1,3 +1,0 @@
-Eventually Ansiblle will log into backuppc and ... automatically copy one of 
-the other per-host configurations and edit the options therein, if necessary.
-
