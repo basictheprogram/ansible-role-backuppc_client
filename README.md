@@ -9,11 +9,24 @@ A description of the settable variables for this role should go here, including 
 
 Available variable are listed below:
 ```
-backuppc_client_user: ""
-backuppc_client_home: ""
-backuppc_client_comment: ""
-backuppc_client_authorized_keys: ""
-
+backuppc_client:
+    - username: ''
+      home: ''
+      shell: '/bin/bash'
+      comment: 'BackupPC User'
+      authorized_keys: ''
+      key_options: 'command=\"sudo /usr/bin/rsync --server --sender -logDtpr --delete --numeric-ids --block-size=2048
+          --exclude=''/proc/*'' 
+          --exclude=''/sys/*'' 
+          --exclude=''/mnt/*'' 
+          --exclude=''/tmp/*'' 
+          --exclude=''/var/tmp/*'' 
+          --exclude=''/var/cache/apt/archives/*'' 
+          --exclude=''/var/log/*/*'' 
+          --exclude=''/var/log/*.*'' 
+          --exclude=''*.iso'' 
+          --exclude=''*.ova'' . /\",
+          no-port-forwarding,no-X11-forwarding,no-agent-forwarding'
 ```
 ## Dependencies ##
 A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
