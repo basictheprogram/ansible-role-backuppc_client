@@ -6,36 +6,45 @@
 - include: debian.yml
   when: ansible_os_family == 'Debian'
 
+- debug: msg="{{ backuppc_client }}"
+
 - name: create backuppc user
   user: >
-    name="{{ backuppc_client.username }}"
-    shell="{{ backuppc_client.shell }}"
+    name="{{ item.username }}"
+    shell="{{ item.shell }}"
     createhome="yes"
     state="present"
-    home="{{ backuppc_client.home }}"
-    comment="{{ backuppc_client.comment }}"
+    home="{{ item.home }}"
+    comment="{{ item.comment }}"
+  with_items:
+      - "{{ backuppc_client }}"
   tags: backuppc
 
 - name: lock backuppc user account
-  command: "/usr/bin/passwd -l {{ backuppc_client.username }}"
+  command: "/usr/bin/passwd -l {{ item.username }}"
   register: result
   failed_when: >
       result.rc != 0
   changed_when: >
       result.rc == 0 and ("Do not report change every time" in result.stderr)
+  with_items:
+      - "{{ backuppc_client }}"
   tags: backuppc
   
 - name: set up authorized_keys
   authorized_key: >
-    user="{{ backuppc_client.username }}"
+    user="{{ item.username }}"
     state="present"
-    key_options="{{ backuppc_client_key_options }}"
-    key="{{ backuppc_client_authorized_keys|b64decode }}"
+    key_options="{{ item.key_options }}"
+    key="{{ item.authorized_keys|b64decode }}"
     manage_dir="yes"
+  with_items:
+      - "{{ backuppc_client }}"
   tags: backuppc
   
 - name: copy sudoers file for safety
   command: "/bin/cp -f /etc/sudoers /etc/sudoers.tmp"
+  register: result
   failed_when: >
       result.rc != 0
   changed_when: >
@@ -46,8 +55,10 @@
   lineinfile: >
       dest="/etc/sudoers.tmp"
       state="present"
-      regexp="^rsyncbackup"
-      line="rsyncbackup ALL=NOPASSWD:/usr/bin/rsync"
+      regexp="^{{ item.username }}"
+      line="{{ item.username }} ALL=NOPASSWD:/usr/bin/rsync"
+  with_items:
+      - "{{ backuppc_client }}"
   tags: backuppc
 
 - name: comment out Default requiretty in sudoers
