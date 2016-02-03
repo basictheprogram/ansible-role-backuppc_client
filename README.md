@@ -35,7 +35,7 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
 ```
 - hosts: servers
   roles:
-    - { role: backuppc-client, sudo: yes }
+    - { role: backuppc-client, become: yes }
 ```
 
 ## License ##
