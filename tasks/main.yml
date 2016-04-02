@@ -78,3 +78,10 @@
       result.rc == 0 and ("Do not report change every time" in result.stderr)
   tags: backuppc
   
+- name: delete old backuppc user rsyncbakup
+  user: >
+    name="rsyncbakup"
+    state="absent"
+    remove="yes"
+  tags: backuppc
+  
