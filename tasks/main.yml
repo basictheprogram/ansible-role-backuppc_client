@@ -5,8 +5,8 @@
 #  when: ansible_os_family == 'RedHat'
 - include: debian.yml
   when: ansible_os_family == 'Debian'
-
-- debug: msg="{{ backuppc_client }}"
+- include: suse.yml
+  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
 - name: create backuppc user
   user: >
@@ -26,12 +26,12 @@
   failed_when: >
       result.rc != 0
   changed_when: >
-      result.rc == 0 and ("Do not report change every time" in result.stderr)
+      false
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
   
-- name: set up authorized_keys
+- name: set up backuppc user authorized_keys
   authorized_key: >
     user="{{ item.username }}"
     state="present"
@@ -41,16 +41,13 @@
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
+
+- include: "../lib/sudo-safety-backup.yml"
+  tags: backup
   
-- name: copy sudoers file for safety
-  command: "/bin/cp -f /etc/sudoers /etc/sudoers.tmp"
-  register: result
-  failed_when: >
-      result.rc != 0
-  changed_when: >
-      result.rc == 0 and ("Do not report change every time" in result.stderr)
-  tags: backuppc
-  
+- include: "../lib/sudo-safety.yml"
+  tags: backup
+    
 - name: add backuppc user to sudoers
   lineinfile: >
       dest="/etc/sudoers.tmp"
@@ -61,27 +58,5 @@
       - "{{ backuppc_client }}"
   tags: backuppc
 
-- name: comment out Default requiretty in sudoers
-  lineinfile: >
-    dest="/etc/sudoers.tmp"
-    state="present"
-    backrefs="yes"
-    regexp="^Defaults(\s)+requiretty$"
-    line="#Defaults    requiretty"
-  tags: backuppc
-  
-- name: final sudoers file check
-  shell: "/usr/sbin/visudo -q -c -f /etc/sudoers.tmp && /bin/cp -f /etc/sudoers.tmp /etc/sudoers"
-  failed_when: >
-      result.rc != 0
-  changed_when: >
-      result.rc == 0 and ("Do not report change every time" in result.stderr)
-  tags: backuppc
-  
-- name: delete old backuppc user rsyncbakup
-  user: >
-    name="rsyncbakup"
-    state="absent"
-    remove="yes"
-  tags: backuppc
-  
+- include: "../lib/sudo-safety-restore.yml"
+  tags: backup
