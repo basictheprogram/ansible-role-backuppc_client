@@ -60,3 +60,15 @@
 
 - include: "../lib/sudo-safety-restore.yml"
   tags: backup
+
+ - name: delete old backuppc users
+   user: >
+     name="{{ item }}"
+     state="absent"
+     remove="yes"
+     ignore_errors="yes"
+   with_items:
+       - "rtebackup"
+       - "rtebakup"
+       - "rsyncbakup"
+   tags: backuppc
