@@ -9,13 +9,13 @@
   when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
 - name: create backuppc user
-  user: >
-    name="{{ item.username }}"
-    shell="{{ item.shell }}"
-    createhome="yes"
-    state="present"
-    home="{{ item.home }}"
-    comment="{{ item.comment }}"
+  user:
+    name: "{{ item.username }}"
+    shell: "{{ item.shell }}"
+    createhome: "yes"
+    state: "present"
+    home: "{{ item.home }}"
+    comment: "{{ item.comment }}"
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
@@ -23,21 +23,19 @@
 - name: lock backuppc user account
   command: "/usr/bin/passwd -l {{ item.username }}"
   register: result
-  failed_when: >
-      result.rc != 0
-  changed_when: >
-      false
+  failed_when: result.rc != 0
+  changed_when: false
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
   
 - name: set up backuppc user authorized_keys
-  authorized_key: >
-    user="{{ item.username }}"
-    state="present"
-    key_options="{{ item.key_options }}"
-    key="{{ item.authorized_keys|b64decode }}"
-    manage_dir="yes"
+  authorized_key:
+    user: "{{ item.username }}"
+    state: "present"
+    key_options: "{{ item.key_options }}"
+    key: "{{ item.authorized_keys|b64decode }}"
+    manage_dir: "yes"
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
@@ -49,11 +47,11 @@
   tags: backup
     
 - name: add backuppc user to sudoers
-  lineinfile: >
-      dest="/etc/sudoers.tmp"
-      state="present"
-      regexp="^{{ item.username }}"
-      line="{{ item.username }} ALL=NOPASSWD:/usr/bin/rsync"
+  lineinfile:
+      dest: "/etc/sudoers.tmp"
+      state: "present"
+      regexp: "^{{ item.username }}"
+      line: "{{ item.username }} ALL=NOPASSWD:/usr/bin/rsync"
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
@@ -62,13 +60,12 @@
   tags: backup
 
 - name: delete old backuppc users
-  user: >
-    name="{{ item }}"
-    state="absent"
-    remove="yes"
+  user:
+    name: "{{ item }}"
+    state: "absent"
+    remove: "yes"
   with_items:
        - "rtebackup"
        - "rtebakup"
        - "rsyncbakup"
   tags: backuppc
-

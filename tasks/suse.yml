@@ -2,9 +2,10 @@
 # tasks file for roles/support-users
 
 - name: change useradd defaults
-  lineinfile: >
-      dest="/etc/login.defs"
-      regexp='^USERGROUPS_ENAB(.*)$'
-      line="USERGROUPS_ENAB yes"
-      state="present"
+  lineinfile:
+      dest: "/etc/login.defs"
+      regexp: '^USERGROUPS_ENAB(.*)$'
+      line: "USERGROUPS_ENAB yes"
+      state: "present"
   tags: backuppc
+  
