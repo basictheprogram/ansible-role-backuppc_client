@@ -41,10 +41,7 @@
   tags: backuppc
 
 - include: "../lib/sudo-safety-backup.yml"
-  tags: backup
-  
-- include: "../lib/sudo-safety.yml"
-  tags: backup
+  tags: backuppc
     
 - name: add backuppc user to sudoers
   lineinfile:
@@ -57,7 +54,7 @@
   tags: backuppc
 
 - include: "../lib/sudo-safety-restore.yml"
-  tags: backup
+  tags: backuppc
 
 - name: delete old backuppc users
   user:
@@ -69,7 +66,7 @@
   tags: backuppc
 
 - include: "../lib/sudo-safety-backup.yml"
-  tags: backup
+  tags: backuppc
 
 - name: delete old backuppc user from sudoers
   lineinfile:
@@ -81,4 +78,4 @@
   tags: backuppc  
 
 - include: "../lib/sudo-safety-restore.yml"
-  tags: backup  
+  tags: backuppc  
