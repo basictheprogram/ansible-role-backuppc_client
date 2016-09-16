@@ -79,3 +79,12 @@
 
 - include: "../lib/sudo-safety-restore.yml"
   tags: backuppc  
+
+- name: accept ssh-dss key types
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    state: present
+    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+    line: "PubkeyAcceptedKeyTypes +ssh-dss"
+  tags: backuppc
+  
