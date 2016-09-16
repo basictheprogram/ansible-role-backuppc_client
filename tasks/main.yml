@@ -1,66 +1,90 @@
 ---
-# tasks file for roles/backuppc-client/tasks/main.yml
+# tasks file for roles/backuppc-client
 
-- include: redhat.yml
-  when: ansible_os_family == 'RedHat'
+#- include: redhat.yml
+#  when: ansible_os_family == 'RedHat'
 - include: debian.yml
   when: ansible_os_family == 'Debian'
+- include: suse.yml
+  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
-- name: create backuppc users
-  sudo: yes
-  user: 
-    name: '{{backuppc_client_user}}'
-    shell: '/bin/bash' 
-    createhome: 'yes'
-    state: 'present'
-    home: '/var/lib/rsyncbackup'
-    comment: 'Backuppc User'
+- name: create backuppc user
+  user:
+    name: "{{ item.username }}"
+    shell: "{{ item.shell }}"
+    createhome: "yes"
+    state: "present"
+    home: "{{ item.home }}"
+    comment: "{{ item.comment }}"
+  with_items:
+      - "{{ backuppc_client }}"
   tags: backuppc
-  
+
 - name: lock backuppc user account
-  sudo: yes
-  command: '/usr/bin/passwd -l {{backuppc_client_user}}'
+  command: "/usr/bin/passwd -l {{ item.username }}"
+  register: result
+  failed_when: result.rc != 0
+  changed_when: false
+  with_items:
+      - "{{ backuppc_client }}"
   tags: backuppc
   
-- name: set up authorized_keys
-  sudo: yes
+- name: set up backuppc user authorized_keys
   authorized_key:
-    user: '{{backuppc_client_user}}'
-    state: 'present'
-    key: "{{lookup('file', 'roles/backuppc-client/files/authorized_keys')}}"
-  tags: backuppc
-  
-- name: copy sudoers file for safety
-  sudo: yes
-  command: /bin/cp -f /etc/sudoers /etc/sudoers.tmp
-  tags: backuppc
-  
-- name: add backuppc user to sudoers
-  sudo: yes
-  lineinfile: dest=/etc/sudoers.tmp state=present regexp='^rsyncbackup' line='rsyncbackup ALL=NOPASSWD:/usr/bin/rsync'
+    user: "{{ item.username }}"
+    state: "present"
+    key_options: "{{ item.key_options }}"
+    key: "{{ item.authorized_keys|b64decode }}"
+    manage_dir: "yes"
+  with_items:
+      - "{{ backuppc_client }}"
   tags: backuppc
 
-- name: comment out Default requiretty in sudoers
-  sudo: yes
-  lineinfile: 
-    dest=/etc/sudoers.tmp 
-    state=present 
-    backrefs=yes
-    regexp='^Defaults(\s)+requiretty$' 
-    line="#Defaults    requiretty"
+- include: "../lib/sudo-safety-backup.yml"
+  tags: backuppc
+    
+- name: add backuppc user to sudoers
+  lineinfile:
+    dest: "/etc/sudoers.tmp"
+    state: "present"
+    regexp: "^{{ item.username }}"
+    line: "{{ item.username }} ALL=NOPASSWD:/usr/bin/rsync"
+  with_items:
+    - "{{ backuppc_client }}"
+  tags: backuppc
+
+- include: "../lib/sudo-safety-restore.yml"
+  tags: backuppc
+
+- name: delete old backuppc users
+  user:
+    name: "{{ item.username }}"
+    state: "absent"
+    remove: "yes"
+  with_items:
+    - "{{ deprecated_backuppc_username }}"
+  tags: backuppc
+
+- include: "../lib/sudo-safety-backup.yml"
+  tags: backuppc
+
+- name: delete old backuppc user from sudoers
+  lineinfile:
+    dest: "/etc/sudoers.tmp"
+    state: "absent"
+    regexp: "^{{ item.username }}"
+  with_items:
+    - "{{ deprecated_backuppc_username }}"
+  tags: backuppc  
+
+- include: "../lib/sudo-safety-restore.yml"
+  tags: backuppc  
+
+- name: accept ssh-dss key types
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    state: present
+    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+    line: "PubkeyAcceptedKeyTypes +ssh-dss"
   tags: backuppc
   
-- name: final sudoers file check
-  sudo: yes
-  shell: /usr/sbin/visudo -q -c -f /etc/sudoers.tmp && /bin/cp -f /etc/sudoers.tmp /etc/sudoers
-  tags: backuppc
-  
-- name: send email notification
-  local_action: mail
-    host='{{postfix_relayhost}}'
-    subject='Backuppc notification for {{fqdn}} {{ansible_default_ipv4.address}}'
-    body="{{lookup('file', 'roles/backuppc-client/files/email-body.txt')}}"
-    from='techs@real-time.com'
-    to='tanner@real-time.com'
-    headers=Reply-To="techs@real-time.com"
-  tags: backuppc
