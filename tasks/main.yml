@@ -79,3 +79,15 @@
 
 - include: "../lib/sudo-safety-restore.yml"
   tags: backuppc  
+
+- name: add host key to backuppc server
+  authorized_key:
+    user: "{{ item.username }}"
+    key:  "{{ item.authorized_keys }}"
+    state: present
+  with_items:
+    - "{{ backuppc_client }}"
+  delegate_to: "{{ backuppc_server_hostname }}"
+  remote_user: ansible
+  when: backuppc_server_hostname is defined
+  tags: backuppc
