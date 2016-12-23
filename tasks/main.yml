@@ -31,7 +31,7 @@
 
 - debug: msg="{{ bootstrap_domainname }}"
   tags: backuppc
-  
+
 - name: set up backuppc user authorized_keys
   authorized_key:
     user: "{{ item.username }}"
@@ -114,6 +114,7 @@
     state: present
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
     line: "PubkeyAcceptedKeyTypes +ssh-dss"
-  when: ansible_distribution_major_version|int <= 14
+  notify:
+    - reload sshd
   tags: backuppc
   

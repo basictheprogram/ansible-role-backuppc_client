@@ -1,2 +1,15 @@
 ---
 # handlers file for roles/backuppc-client
+
+- name: reload sshd
+  service:
+    name: ssh
+    state: reloaded
+  tags: bootstrap
+
+- name: restart sshd
+  service:
+    name: sshd
+    state: restarted
+  tags: bootstrap
+  
