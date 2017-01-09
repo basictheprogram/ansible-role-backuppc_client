@@ -1,3 +1,15 @@
 ---
 # tasks file for roles/backuppc-client/debian.yml
 
+# Debian/Ubuntu specific? 
+# Not a valid option on openSUSE
+#
+- name: accept ssh-dss key types
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    state: present
+    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+    line: "PubkeyAcceptedKeyTypes +ssh-dss"
+  notify:
+    - reload sshd
+  tags: backuppc

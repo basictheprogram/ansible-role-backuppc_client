@@ -108,13 +108,4 @@
 #  when: backuppc_server_hostname is defined
   tags: backuppc2
 
-- name: accept ssh-dss key types
-  lineinfile:
-    dest: /etc/ssh/sshd_config
-    state: present
-    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-    line: "PubkeyAcceptedKeyTypes +ssh-dss"
-  notify:
-    - reload sshd
-  tags: backuppc
   
