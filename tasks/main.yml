@@ -91,21 +91,23 @@
 
 - debug: msg="{{ ssh_host_keys.content | b64decode }}"
   tags: backuppc2
+
 - debug: msg="{{ ansible_ssh_host }}"
   tags: backuppc2
+
 - debug: msg="{{ ansible_fqdn }} {{ ssh_host_keys.content | b64decode }}"
   tags: backuppc2
 
-- name: add ssh key to backuppc server known_hosts
-  known_hosts:
-    path: /etc/ssh/ssh_known_hosts
-    name: "{{ ansible_fqdn }}"
-    key: "{{ ansible_fqdn }} {{ ssh_host_keys.content | b64decode }}"
-    state: present
-  delegate_to: backuppc.castle.real-time.com
+#- name: add ssh key to backuppc server known_hosts
+#  known_hosts:
+#    path: /etc/ssh/ssh_known_hosts
+#    name: "{{ ansible_fqdn }}"
+#    key: "{{ ansible_fqdn }} {{ ssh_host_keys.content | b64decode }}"
+#    state: present
+#  delegate_to: backuppc.castle.real-time.com
 #  delegate_to: "{{ backuppc_server_hostname }}"
-  remote_user: ansible
+#  remote_user: ansible
 #  when: backuppc_server_hostname is defined
-  tags: backuppc2
+#  tags: backuppc2
 
   
