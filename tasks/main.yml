@@ -1,11 +1,11 @@
 ---
 # tasks file for roles/backuppc-client
 
-#- include: redhat.yml
+#- import_tasks: redhat.yml
 #  when: ansible_os_family == 'RedHat'
-- include: debian.yml
+- import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
-- include: suse.yml
+- import_tasks: suse.yml
   when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
 - name: create backuppc user
@@ -43,7 +43,7 @@
       - "{{ backuppc_client }}"
   tags: backuppc
 
-- include: "../lib/sudo-safety-backup.yml"
+- import_tasks: "../lib/sudo-safety-backup.yml"
   tags: backuppc
     
 - name: add backuppc user to sudoers
@@ -56,7 +56,7 @@
     - "{{ backuppc_client }}"
   tags: backuppc
 
-- include: "../lib/sudo-safety-restore.yml"
+- import_tasks: "../lib/sudo-safety-restore.yml"
   tags: backuppc
 
 - name: delete old backuppc users
@@ -68,7 +68,7 @@
     - "{{ deprecated_backuppc_username }}"
   tags: backuppc
 
-- include: "../lib/sudo-safety-backup.yml"
+- import_tasks: "../lib/sudo-safety-backup.yml"
   tags: backuppc
 
 - name: delete old backuppc user from sudoers
@@ -80,7 +80,7 @@
     - "{{ deprecated_backuppc_username }}"
   tags: backuppc  
 
-- include: "../lib/sudo-safety-restore.yml"
+- import_tasks: "../lib/sudo-safety-restore.yml"
   tags: backuppc  
 
 - name: get ssh_host key
