@@ -83,20 +83,20 @@
 - import_tasks: "../lib/sudo-safety-restore.yml"
   tags: backuppc  
 
-- name: get ssh_host key
-  slurp:
-    src: /etc/ssh/ssh_host_ecdsa_key.pub
-  register: ssh_host_keys
-  tags: backuppc2
+#- name: get ssh_host key
+#  slurp:
+#    src: /etc/ssh/ssh_host_ecdsa_key.pub
+#  register: ssh_host_keys
+#  tags: backuppc2
 
-- debug: msg="{{ ssh_host_keys.content | b64decode }}"
-  tags: backuppc2
+#- debug: msg="{{ ssh_host_keys.content | b64decode }}"
+#  tags: backuppc2
 
-- debug: msg="{{ ansible_ssh_host }}"
-  tags: backuppc2
+#- debug: msg="{{ ansible_ssh_host }}"
+#  tags: backuppc2
 
-- debug: msg="{{ ansible_fqdn }} {{ ssh_host_keys.content | b64decode }}"
-  tags: backuppc2
+#- debug: msg="{{ ansible_fqdn }} {{ ssh_host_keys.content | b64decode }}"
+#  tags: backuppc2
 
 #- name: add ssh key to backuppc server known_hosts
 #  known_hosts:
