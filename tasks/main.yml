@@ -16,6 +16,7 @@
     state: "present"
     home: "{{ item.home }}"
     comment: "{{ item.comment }}"
+    password: "*"
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
@@ -27,10 +28,7 @@
   changed_when: false
   with_items:
       - "{{ backuppc_client }}"
-  tags: backuppc
-
-- debug: msg="{{ bootstrap_domainname }}"
-  tags: backuppc
+  tags: backuppc2
 
 - name: set up backuppc user authorized_keys
   authorized_key:
@@ -110,4 +108,3 @@
 #  when: backuppc_server_hostname is defined
 #  tags: backuppc2
 
-  
