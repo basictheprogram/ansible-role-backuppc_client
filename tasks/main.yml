@@ -3,10 +3,20 @@
 
 #- import_tasks: redhat.yml
 #  when: ansible_os_family == 'RedHat'
+
+- name: gather OS specific variables
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution_release }}.yml"
+    - "{{ ansible_distribution }}.yml"
+    - "{{ ansible_os_family }}.yml"
+  tags: backuppc
+
 - import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
-- import_tasks: suse.yml
-  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
+
+#- import_tasks: suse.yml
+#  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
 - name: create backuppc user
   user:
