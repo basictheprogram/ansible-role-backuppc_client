@@ -18,6 +18,8 @@
 #- import_tasks: suse.yml
 #  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
+# look in group_vars and host_vars for default value for {{ backuppc_client }}
+#
 - name: create backuppc user
   user:
     name: "{{ item.username }}"
