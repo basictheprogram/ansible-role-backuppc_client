@@ -12,6 +12,10 @@
     - "{{ ansible_os_family }}.yml"
   tags: backuppc
 
+- name: personal variables
+  include_vars: "{{ lookup('env','HOME') }}/.ansible/{{ role_name }}.yml"
+  tags: backuppc
+
 - import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
 
@@ -40,6 +44,12 @@
   changed_when: false
   with_items:
       - "{{ backuppc_client }}"
+  tags: backuppc
+
+- debug:
+    msg: "{{ item.username }}{{ item.authorized_keys }}"
+  with_items:
+    - "{{ backuppc_client }}"
   tags: backuppc2
 
 - name: set up backuppc user authorized_keys
