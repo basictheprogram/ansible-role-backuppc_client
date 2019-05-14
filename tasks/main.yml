@@ -14,6 +14,7 @@
 
 - name: personal variables
   include_vars: "{{ lookup('env','HOME') }}/.ansible/{{ role_name }}.yml"
+  ignore_errors: yes
   tags: backuppc
 
 - import_tasks: debian.yml
@@ -102,6 +103,17 @@
 
 - import_tasks: "../lib/sudo-safety-restore.yml"
   tags: backuppc  
+
+# Can override the location "{{ known_host_keys_dir }}" 
+# default is in defaults/main.yml
+#
+- name: fetch ssh public keys
+  fetch:
+    src: "/etc/ssh/{{ item }}"
+    dest: "{{ known_host_keys_dir }}/known_hosts_keys"
+  with_items:
+      - "{{ ssh_host_pub_keys }}"  
+  tags: backuppc
 
 #- name: get ssh_host key
 #  slurp:

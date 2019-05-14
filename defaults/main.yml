@@ -1,2 +1,10 @@
 ---
 # defaults file for roles/backuppc-client
+
+known_host_keys_dir: "{{ playbook_dir }}"
+
+ssh_host_pub_keys:
+  - "ssh_host_dsa_key.pub"
+  - "ssh_host_ed25519_key.pub"
+  - "ssh_host_ecdsa_key.pub"
+  - "ssh_host_rsa_key.pub"
