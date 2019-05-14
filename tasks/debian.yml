@@ -10,6 +10,19 @@
     state: present
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
     line: "PubkeyAcceptedKeyTypes +ssh-dss"
+  when:
+    - ansible_lsb.major_release|int >= 16
+  notify:
+    - reload sshd
+  tags: backuppc
+
+- name: remove ssh-dss key types 
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    state: absent
+    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+  when:
+    - ansible_lsb.major_release|int < 16
   notify:
     - reload sshd
   tags: backuppc
