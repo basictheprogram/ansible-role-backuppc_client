@@ -114,22 +114,12 @@
   with_items:
       - "{{ ssh_host_pub_keys }}"  
   ignore_errors: yes
+  register: blah
   tags: backuppc
 
-#- name: get ssh_host key
-#  slurp:
-#    src: /etc/ssh/ssh_host_ecdsa_key.pub
-#  register: ssh_host_keys
-#  tags: backuppc2
-
-#- debug: msg="{{ ssh_host_keys.content | b64decode }}"
-#  tags: backuppc2
-
-#- debug: msg="{{ ansible_ssh_host }}"
-#  tags: backuppc2
-
-#- debug: msg="{{ ansible_fqdn }} {{ ssh_host_keys.content | b64decode }}"
-#  tags: backuppc2
+- debug:
+    msg: "{{ blah }}"
+  tags: backuppc
 
 #- name: add ssh key to backuppc server known_hosts
 #  known_hosts:
