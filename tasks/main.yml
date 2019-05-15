@@ -10,8 +10,10 @@
     - "{{ ansible_distribution_release }}.yml"
     - "{{ ansible_distribution }}.yml"
     - "{{ ansible_os_family }}.yml"
-  tags: backuppc
-
+  tags: 
+    - backuppc
+    - backuppc2
+    
 - name: personal variables
   include_vars: "{{ lookup('env','HOME') }}/.ansible/{{ role_name }}.yml"
   ignore_errors: yes
@@ -114,22 +116,44 @@
   with_items:
       - "{{ ssh_host_pub_keys }}"  
   ignore_errors: yes
-  register: blah
-  tags: backuppc
+  register: ssh_host_keys
+  tags: 
+    - backuppc
+    - backuppc2
 
 - debug:
-    msg: "{{ blah }}"
-  tags: backuppc
+    msg: "{{ ansible_fqdn }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+  with_items:
+    - "{{ ssh_host_keys.results }}"
+  tags:
+    - backuppc
 
-#- name: add ssh key to backuppc server known_hosts
-#  known_hosts:
-#    path: /etc/ssh/ssh_known_hosts
-#    name: "{{ ansible_fqdn }}"
-#    key: "{{ ansible_fqdn }} {{ ssh_host_keys.content | b64decode }}"
-#    state: present
-#  delegate_to: backuppc.castle.real-time.com
+- name: add ssh host key to backuppc known_hosts
+  known_hosts:
+    path: /etc/ssh/ssh_known_hosts
+    name: "{{ ansible_fqdn }}"
+    key: "{{ ansible_fqdn }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+    state: present
+  with_items:
+    - "{{ ssh_host_keys.results }}"
+  delegate_to: backuppc.castle.real-time.com
 #  delegate_to: "{{ backuppc_server_hostname }}"
-#  remote_user: ansible
+  remote_user: ansible
 #  when: backuppc_server_hostname is defined
-#  tags: backuppc2
+  tags: 
+    - backuppc
+    - backuppc2
 
+- name: remove ssh host key on the backuppc known_hosts
+  known_hosts:
+    path: /etc/ssh/ssh_known_hosts
+    name: "{{ ansible_fqdn }}"
+    state: absent
+  with_items:
+    - "{{ backuppc_server.deprecated_users }}"
+  delegate_to: backuppc.castle.real-time.com
+#  delegate_to: "{{ backuppc_server_hostname }}"
+  remote_user: ansible
+  when: 
+     - backuppc_server is defined
+  tags: backuppc
