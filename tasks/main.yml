@@ -1,13 +1,43 @@
 ---
 # tasks file for roles/backuppc-client
 
-#- include: redhat.yml
+#- import_tasks: redhat.yml
 #  when: ansible_os_family == 'RedHat'
-- include: debian.yml
-  when: ansible_os_family == 'Debian'
-- include: suse.yml
-  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
+- name: gather OS specific variables
+  include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+      - "{{ ansible_distribution_release }}.yml"
+      - "{{ ansible_distribution }}.yml"
+      - "{{ ansible_os_family }}.yml"
+  register: include_vars_result
+  tags: 
+    - backuppc
+    - backuppc2
+
+- name: personal variables
+  include_vars: "{{ lookup('env','HOME') }}/.ansible/{{ role_name }}.yml"
+  ignore_errors: yes
+  tags: backuppc
+
+- import_tasks: debian.yml
+  when: ansible_os_family == 'Debian'
+
+#- import_tasks: suse.yml
+#  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
+
+- name: delete old backuppc users
+  user:
+    name: "{{ item.username }}"
+    state: "absent"
+    remove: "yes"
+  with_items:
+    - "{{ deprecated_backuppc_username }}"
+  tags: backuppc
+
+# look in group_vars and host_vars for default value for {{ backuppc_client }}
+#
 - name: create backuppc user
   user:
     name: "{{ item.username }}"
@@ -16,31 +46,26 @@
     state: "present"
     home: "{{ item.home }}"
     comment: "{{ item.comment }}"
+    password: "*"
+    password_lock: yes
+    update_password: always
   with_items:
       - "{{ backuppc_client }}"
+  changed_when: False
   tags: backuppc
 
-- name: lock backuppc user account
-  command: "/usr/bin/passwd -l {{ item.username }}"
-  register: result
-  failed_when: result.rc != 0
-  changed_when: false
-  with_items:
-      - "{{ backuppc_client }}"
-  tags: backuppc
-  
 - name: set up backuppc user authorized_keys
   authorized_key:
     user: "{{ item.username }}"
     state: "present"
     key_options: "{{ item.key_options }}"
-    key: "{{ item.authorized_keys|b64decode }}"
+    key: "{{ item.authorized_keys }}"
     manage_dir: "yes"
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
 
-- include: "../lib/sudo-safety-backup.yml"
+- import_tasks: "../lib/sudo-safety-backup.yml"
   tags: backuppc
     
 - name: add backuppc user to sudoers
@@ -53,19 +78,10 @@
     - "{{ backuppc_client }}"
   tags: backuppc
 
-- include: "../lib/sudo-safety-restore.yml"
+- import_tasks: "../lib/sudo-safety-restore.yml"
   tags: backuppc
 
-- name: delete old backuppc users
-  user:
-    name: "{{ item.username }}"
-    state: "absent"
-    remove: "yes"
-  with_items:
-    - "{{ deprecated_backuppc_username }}"
-  tags: backuppc
-
-- include: "../lib/sudo-safety-backup.yml"
+- import_tasks: "../lib/sudo-safety-backup.yml"
   tags: backuppc
 
 - name: delete old backuppc user from sudoers
@@ -77,14 +93,50 @@
     - "{{ deprecated_backuppc_username }}"
   tags: backuppc  
 
-- include: "../lib/sudo-safety-restore.yml"
+- import_tasks: "../lib/sudo-safety-restore.yml"
   tags: backuppc  
 
-- name: accept ssh-dss key types
-  lineinfile:
-    dest: /etc/ssh/sshd_config
+# Can override the location "{{ known_host_keys_dir }}" 
+# default is in defaults/main.yml
+#
+- name: fetch ssh public keys
+  fetch:
+    src: "/etc/ssh/{{ item }}"
+    dest: "{{ known_host_keys_dir }}/known_host_keys"
+  with_items:
+      - "{{ ssh_host_pub_keys }}"  
+  ignore_errors: yes
+  register: ssh_host_keys
+  tags: 
+    - backuppc
+    - backuppc2
+
+- debug:
+    msg: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+  when:
+    - item.failed == False
+  with_items:
+    - "{{ ssh_host_keys.results }}"
+  ignore_errors: yes
+  tags:
+    - backuppc
+    - backuppc2
+
+- name: add ssh host key to backuppc known_hosts
+  known_hosts:
+    path: /etc/ssh/ssh_known_hosts
+    name: "{{ ansible_fqdn }}"
+    key: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
     state: present
-    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-    line: "PubkeyAcceptedKeyTypes +ssh-dss"
-  tags: backuppc
-  
+  when: 
+    - backuppc_server_hostname is defined
+    - item.failed == False    
+  with_items:
+    - "{{ ssh_host_keys.results }}"
+  delegate_to: "{{ backuppc_server_hostname }}"
+  remote_user: ansible
+  changed_when: 
+    - item.changed == True
+  tags: 
+    - backuppc
+    - backuppc2
