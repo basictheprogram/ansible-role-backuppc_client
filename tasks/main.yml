@@ -44,20 +44,11 @@
     state: "present"
     home: "{{ item.home }}"
     comment: "{{ item.comment }}"
-#    password: "*"
+    password: "*"
     password_lock: yes
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
-
-#- name: lock backuppc user account
-#  command: "/usr/bin/passwd -l {{ item.username }}"
-#  register: result
-#  failed_when: result.rc != 0
-#  changed_when: false
-#  with_items:
-#      - "{{ backuppc_client }}"
-#  tags: backuppc
 
 - debug:
     msg: "{{ item.username }}{{ item.authorized_keys }}"
