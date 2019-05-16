@@ -12,6 +12,7 @@
     - "{{ ansible_os_family }}.yml"
   tags: 
     - backuppc
+    - backuppc2
     
 - name: personal variables
   include_vars: "{{ lookup('env','HOME') }}/.ansible/{{ role_name }}.yml"
@@ -43,19 +44,20 @@
     state: "present"
     home: "{{ item.home }}"
     comment: "{{ item.comment }}"
-    password: "*"
+#    password: "*"
+    password_lock: yes
   with_items:
       - "{{ backuppc_client }}"
   tags: backuppc
 
-- name: lock backuppc user account
-  command: "/usr/bin/passwd -l {{ item.username }}"
-  register: result
-  failed_when: result.rc != 0
-  changed_when: false
-  with_items:
-      - "{{ backuppc_client }}"
-  tags: backuppc
+#- name: lock backuppc user account
+#  command: "/usr/bin/passwd -l {{ item.username }}"
+#  register: result
+#  failed_when: result.rc != 0
+#  changed_when: false
+#  with_items:
+#      - "{{ backuppc_client }}"
+#  tags: backuppc
 
 - debug:
     msg: "{{ item.username }}{{ item.authorized_keys }}"
@@ -118,25 +120,34 @@
   register: ssh_host_keys
   tags: 
     - backuppc
+    - backuppc2
 
 - debug:
-    msg: "{{ ansible_fqdn }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+    msg: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+  when:
+    - item.failed == False
   with_items:
     - "{{ ssh_host_keys.results }}"
+  ignore_errors: yes
   tags:
     - backuppc
+    - backuppc2
 
 - name: add ssh host key to backuppc known_hosts
   known_hosts:
     path: /etc/ssh/ssh_known_hosts
     name: "{{ ansible_fqdn }}"
-    key: "{{ ansible_fqdn }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+    key: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
     state: present
+  when: 
+    - backuppc_server_hostname is defined
+    - item.failed == False    
   with_items:
     - "{{ ssh_host_keys.results }}"
-  delegate_to: backuppc.castle.real-time.com
-#  delegate_to: "{{ backuppc_server_hostname }}"
+  delegate_to: "{{ backuppc_server_hostname }}"
   remote_user: ansible
-#  when: backuppc_server_hostname is defined
+  changed_when: 
+    - item.changed == True
   tags: 
     - backuppc
+    - backuppc2
