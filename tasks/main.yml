@@ -7,13 +7,15 @@
 - name: gather OS specific variables
   include_vars: "{{ item }}"
   with_first_found:
-    - "{{ ansible_distribution_release }}.yml"
-    - "{{ ansible_distribution }}.yml"
-    - "{{ ansible_os_family }}.yml"
+    - files:
+      - "{{ ansible_distribution_release }}.yml"
+      - "{{ ansible_distribution }}.yml"
+      - "{{ ansible_os_family }}.yml"
+  register: include_vars_result
   tags: 
     - backuppc
     - backuppc2
-    
+
 - name: personal variables
   include_vars: "{{ lookup('env','HOME') }}/.ansible/{{ role_name }}.yml"
   ignore_errors: yes
