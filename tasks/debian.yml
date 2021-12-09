@@ -1,7 +1,15 @@
 ---
 # tasks file for roles/backuppc-client/debian.yml
 
-# Debian/Ubuntu specific? 
+- name: install backuppc client packages (apt)
+  apt:
+    name: "{{ backuppc_client_packages }}"
+    state: "present"
+    install_recommends: false
+    force_apt_get: yes
+  tags: backuppc
+
+# Debian/Ubuntu specific?
 # Not a valid option on openSUSE
 #
 - name: accept ssh-dss key types
@@ -10,19 +18,39 @@
     state: present
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
     line: "PubkeyAcceptedKeyTypes +ssh-dss"
+    validate: "sshd -T -f %s"
   when:
     - ansible_lsb.major_release|int >= 16
+    - ansible_lsb.major_release|int < 20
   notify:
     - reload sshd
   tags: backuppc
 
-- name: remove ssh-dss key types 
+  # Ubuntu 20.04 has /etc/ssh/sshd_config.d use it!
+  # Does this break with Debian?
+  #
+- name: configure openssh server (ubuntu 20.04+)
+  copy:
+    src: files/etc/ssh/sshd_config.d/
+    dest: /etc/ssh/sshd_config.d
+    owner: root
+    group: root
+    mode: "0400"
+    validate: "sshd -T -f %s"
+  when:
+    - ansible_lsb.major_release|int >= 20
+  notify:
+    - reload sshd
+  tags: backuppc
+
+- name: remove ssh-dss key types
   lineinfile:
     dest: /etc/ssh/sshd_config
     state: absent
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+    validate: "sshd -T -f %s"
   when:
-    - ansible_lsb.major_release|int < 16
+    - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
   notify:
     - reload sshd
   tags: backuppc

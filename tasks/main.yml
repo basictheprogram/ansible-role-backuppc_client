@@ -1,31 +1,21 @@
 ---
 # tasks file for roles/backuppc-client
 
-#- import_tasks: redhat.yml
-#  when: ansible_os_family == 'RedHat'
-
 - name: gather OS specific variables
-  include_vars: "{{ item }}"
-  with_first_found:
-    - files:
-      - "{{ ansible_distribution_release }}.yml"
-      - "{{ ansible_distribution }}.yml"
-      - "{{ ansible_os_family }}.yml"
-  register: include_vars_result
-  tags: 
-    - backuppc
-    - backuppc2
-
-- name: personal variables
-  include_vars: "{{ lookup('env','HOME') }}/.ansible/{{ role_name }}.yml"
-  ignore_errors: yes
+  include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files:
+        - "{{ ansible_distribution_release }}.yml"
+        - "{{ ansible_distribution }}.yml"
+        - "{{ ansible_os_family }}.yml"
+        - "main.yml"
+      paths:
+        - "vars"
   tags: backuppc
 
 - import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
-
-#- import_tasks: suse.yml
-#  when: ansible_os_family == 'Suse' or ansible_os_family == 'openSUSE'
 
 - name: delete old backuppc users
   user:
@@ -56,87 +46,99 @@
 
 - name: set up backuppc user authorized_keys
   authorized_key:
-    user: "{{ item.username }}"
+    user: "{{ item.0.username }}"
     state: "present"
-    key_options: "{{ item.key_options }}"
-    key: "{{ item.authorized_keys }}"
+    key_options: "{{ item.0.key_options }}"
+    key: "{{ item.1 }}"
     manage_dir: "yes"
-  with_items:
-      - "{{ backuppc_client }}"
+  with_subelements:
+    - "{{ backuppc_client }}"
+    - authorized_keys
   tags: backuppc
 
-- import_tasks: "../lib/sudo-safety-backup.yml"
+# TODO: task to remove old/deprecated autheorized_keys?
+
+# Ubuntu release older than 20.04 (Focal) use the monolithic /etc/sudoers file
+#
+- name: add backuppc user to monolithic sudoers file
+  import_tasks: monolithic_sudoers.yml
+  when:
+    - ansible_lsb.major_release|int < 20
   tags: backuppc
-    
-- name: add backuppc user to sudoers
-  lineinfile:
-    dest: "/etc/sudoers.tmp"
-    state: "present"
-    regexp: "^{{ item.username }}"
-    line: "{{ item.username }} ALL=NOPASSWD:/usr/bin/rsync"
+
+# Ubuntu releases 20.04 and newer have /etc/sudoer.d/
+#
+- name: add backuppc user to sudoers.d
+  copy:
+    content: |
+      {{ item.username }} ALL=NOPASSWD:/usr/bin/rsync
+
+    dest: "/etc/sudoers.d/{{ item.username }}"
+    mode: "0440"
   with_items:
     - "{{ backuppc_client }}"
+  when:
+    - ansible_lsb.major_release|int >= 20
   tags: backuppc
 
-- import_tasks: "../lib/sudo-safety-restore.yml"
+- include_tasks: "{{ role_path }}/../lib/sudo-safety-backup.yml"
   tags: backuppc
 
-- import_tasks: "../lib/sudo-safety-backup.yml"
-  tags: backuppc
-
-- name: delete old backuppc user from sudoers
+- name: delete old backuppc user from sudoers (monolithic)
   lineinfile:
     dest: "/etc/sudoers.tmp"
     state: "absent"
     regexp: "^{{ item.username }}"
   with_items:
     - "{{ deprecated_backuppc_username }}"
-  tags: backuppc  
+  tags: backuppc
 
-- import_tasks: "../lib/sudo-safety-restore.yml"
-  tags: backuppc  
+- include_tasks: "{{ role_path }}/../lib/sudo-safety-restore.yml"
+  tags: backuppc
 
-# Can override the location "{{ known_host_keys_dir }}" 
+- name: delete old backuppc user from sudoers.d
+  file:
+    path: "/etc/sudoers.d/{{ item.username }}"
+    state: absent
+  with_items:
+    - "{{ deprecated_backuppc_username }}"
+  tags: backuppc
+
+    # Can override the location "{{ known_host_keys_dir }}"
 # default is in defaults/main.yml
 #
-- name: fetch ssh public keys
-  fetch:
-    src: "/etc/ssh/{{ item }}"
-    dest: "{{ known_host_keys_dir }}/known_host_keys"
-  with_items:
-      - "{{ ssh_host_pub_keys }}"  
-  ignore_errors: yes
-  register: ssh_host_keys
-  tags: 
-    - backuppc
-    - backuppc2
-
-- debug:
-    msg: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
-  when:
-    - item.failed == False
-  with_items:
-    - "{{ ssh_host_keys.results }}"
-  ignore_errors: yes
-  tags:
-    - backuppc
-    - backuppc2
-
-- name: add ssh host key to backuppc known_hosts
-  known_hosts:
-    path: /etc/ssh/ssh_known_hosts
-    name: "{{ ansible_fqdn }}"
-    key: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
-    state: present
-  when: 
-    - backuppc_server_hostname is defined
-    - item.failed == False    
-  with_items:
-    - "{{ ssh_host_keys.results }}"
-  delegate_to: "{{ backuppc_server_hostname }}"
-  remote_user: ansible
-  changed_when: 
-    - item.changed == True
-  tags: 
-    - backuppc
-    - backuppc2
+#- name: fetch ssh public keys
+#  fetch:
+#    src: "/etc/ssh/{{ item }}"
+#    dest: "{{ known_host_keys_dir }}/known_host_keys"
+#  with_items:
+#      - "{{ ssh_host_pub_keys }}"
+#  ignore_errors: yes
+#  register: ssh_host_keys
+#  tags: backuppc
+#
+#- debug:
+#    msg: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+#  when:
+#    - not item.failed
+#  with_items:
+#    - "{{ ssh_host_keys.results }}"
+#  ignore_errors: yes
+#  tags: backuppc
+#
+#- name: add ssh host key to backuppc known_hosts
+#  known_hosts:
+#    path: /etc/ssh/ssh_known_hosts
+#    name: "{{ ansible_fqdn }}"
+#    key: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
+#    state: present
+#  when:
+#    - backuppc_server_hostname is defined
+#    - not item.failed
+#  with_items:
+#    - "{{ ssh_host_keys.results }}"
+#  delegate_to: "{{ backuppc_server_hostname }}"
+#  remote_user: ansible
+#  changed_when:
+#    - item.changed
+#  tags: backuppc
