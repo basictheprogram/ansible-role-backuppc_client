@@ -1,0 +1,69 @@
+---
+# Debian/Ubuntu specific?
+# Not a valid option on openSUSE
+#
+- name: UBUNTU accept ssh-dss key types
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    state: present
+    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+    line: "PubkeyAcceptedKeyTypes +ssh-dss"
+    validate: "sshd -T -f %s"
+  when:
+    - ansible_lsb.major_release|int >= 16
+    - ansible_lsb.major_release|int < 20
+  notify:
+    - reload sshd
+  tags: backuppc
+
+  # Ubuntu 20.04 has /etc/ssh/sshd_config.d use it!
+  # Does this break with Debian?
+  #
+- name: UBUNTU configure openssh server (ubuntu 20.04+)
+  copy:
+    src: files/etc/ssh/sshd_config.d/
+    dest: /etc/ssh/sshd_config.d
+    owner: root
+    group: root
+    mode: "0400"
+    validate: "sshd -T -f %s"
+  when:
+    - ansible_lsb.major_release|int >= 20
+  notify:
+    - reload sshd
+  tags: backuppc
+
+- name: UBUNTU remove ssh-dss key types
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    state: absent
+    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+    validate: "sshd -T -f %s"
+  when:
+    - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
+  notify:
+    - reload sshd
+  tags: backuppc
+
+# Ubuntu release older than 20.04 (Focal) use the monolithic /etc/sudoers file
+#
+- name: UBUNTU add backuppc user to monolithic sudoers file
+  import_tasks: monolithic_sudoers.yml
+  when:
+    - ansible_lsb.major_release|int < 20
+  tags: backuppc
+
+# Ubuntu releases 20.04 and newer have /etc/sudoer.d/
+#
+- name: UBUNTU add backuppc user to sudoers.d
+  copy:
+    content: |
+      {{ item.username }} ALL=NOPASSWD:/usr/bin/rsync
+
+    dest: "/etc/sudoers.d/{{ item.username }}"
+    mode: "0440"
+  with_items:
+    - "{{ backuppc_client }}"
+  when:
+    - ansible_lsb.major_release|int >= 20
+  tags: backuppc

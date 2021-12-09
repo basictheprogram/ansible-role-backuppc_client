@@ -1,5 +1,8 @@
 ---
 # tasks file for roles/backuppc-client
+- debug:
+    msg: "{{ ansible_distribution_release }}:{{ ansible_distribution }}:{{ ansible_os_family }}"
+  tags: backuppc
 
 - name: gather OS specific variables
   include_vars: "{{ lookup('first_found', params) }}"
@@ -17,6 +20,9 @@
 - import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
 
+# Tasks after this comment (are hopefully) common to a linux bases operating
+# systems?
+#
 - name: delete old backuppc users
   user:
     name: "{{ item.username }}"
@@ -26,7 +32,7 @@
     - "{{ deprecated_backuppc_username }}"
   tags: backuppc
 
-# look in group_vars and host_vars for default value for {{ backuppc_client }}
+# Look in group_vars and host_vars for default value for {{ backuppc_client }}
 #
 - name: create backuppc user
   user:
@@ -42,7 +48,7 @@
   with_items:
       - "{{ backuppc_client }}"
   changed_when: False
-  tags: backuppc
+  tags: backuppc2
 
 - name: set up backuppc user authorized_keys
   authorized_key:
@@ -57,29 +63,6 @@
   tags: backuppc
 
 # TODO: task to remove old/deprecated autheorized_keys?
-
-# Ubuntu release older than 20.04 (Focal) use the monolithic /etc/sudoers file
-#
-- name: add backuppc user to monolithic sudoers file
-  import_tasks: monolithic_sudoers.yml
-  when:
-    - ansible_lsb.major_release|int < 20
-  tags: backuppc
-
-# Ubuntu releases 20.04 and newer have /etc/sudoer.d/
-#
-- name: add backuppc user to sudoers.d
-  copy:
-    content: |
-      {{ item.username }} ALL=NOPASSWD:/usr/bin/rsync
-
-    dest: "/etc/sudoers.d/{{ item.username }}"
-    mode: "0440"
-  with_items:
-    - "{{ backuppc_client }}"
-  when:
-    - ansible_lsb.major_release|int >= 20
-  tags: backuppc
 
 - include_tasks: "{{ role_path }}/../lib/sudo-safety-backup.yml"
   tags: backuppc
@@ -104,7 +87,7 @@
     - "{{ deprecated_backuppc_username }}"
   tags: backuppc
 
-    # Can override the location "{{ known_host_keys_dir }}"
+# Can override the location "{{ known_host_keys_dir }}"
 # default is in defaults/main.yml
 #
 #- name: fetch ssh public keys

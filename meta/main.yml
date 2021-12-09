@@ -9,11 +9,15 @@
     license: license (BSD, MIT)
     min_ansible_version: 2.9
     platforms:
+      - name: Debian
+        version:
+          - buster
       - name: Ubuntu
         versions:
           - bionic
           - focal
           - xenial
     galaxy_tags:
+      - debian
       - linux
       - ubuntu
