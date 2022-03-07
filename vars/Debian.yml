@@ -1,6 +1,7 @@
 ---
 backuppc_client_packages:
   - openssh-server
+  - pigz
 
 known_host_keys_dir: "{{ playbook_dir }}"
 

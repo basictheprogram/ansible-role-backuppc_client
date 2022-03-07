@@ -67,3 +67,17 @@
   when:
     - ansible_lsb.major_release|int >= 20
   tags: backuppc
+
+- name: UBUNTU add backuppc user MySQL dump to sudoers.d
+  copy:
+    content: |
+      {{ item.username }} ALL=NOPASSWD:{{ mysql_dump_script }}
+
+    dest: "/etc/sudoers.d/{{ item.username }}_mysql_dump"
+    mode: "0440"
+  with_items:
+    - "{{ backuppc_client }}"
+  when:
+    - ansible_lsb.major_release|int >= 20
+    - mysql_dump_script is defined
+  tags: backuppc

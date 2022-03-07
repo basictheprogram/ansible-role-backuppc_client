@@ -1,8 +1,11 @@
 ---
 # Tasks to handle monolithic sudoers files.
 #
-- name: backup sudoers
-  include_tasks: "{{ role_path }}/../lib/sudo-safety-backup.yml"
+- name: copy sudoers file for safety
+  command: "cp -f /etc/sudoers /etc/sudoers.tmp"
+  register: result
+  failed_when: result.rc != 0
+  changed_when: False
   tags: backuppc
 
 - name: add backuppc user to sudoers
@@ -15,6 +18,14 @@
     - "{{ backuppc_client }}"
   tags: backuppc
 
-- name: restore sudoers
-  include_tasks: "{{ role_path }}/../lib/sudo-safety-restore.yml"
-  tags: backuppc
+- name: final sudoers file check
+  shell: "/usr/sbin/visudo -q -c -f /etc/sudoers.tmp && cp -f /etc/sudoers.tmp /etc/sudoers"
+  register: result
+  failed_when: result.rc != 0
+  changed_when: False
+
+- name: clean up temp file
+  file:
+    path: "/etc/sudoers.tmp"
+    state: "absent"
+  changed_when: False

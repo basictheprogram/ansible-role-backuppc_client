@@ -4,6 +4,11 @@
     msg: "{{ ansible_distribution_release }}:{{ ansible_distribution }}:{{ ansible_os_family }}"
   tags: backuppc
 
+- name: group_names
+  debug:
+    msg: "{{ group_names }}"
+  tags: backuppc
+
 - name: gather OS specific variables
   include_vars: "{{ lookup('first_found', params) }}"
   vars:
@@ -48,7 +53,7 @@
   with_items:
       - "{{ backuppc_client }}"
   changed_when: False
-  tags: backuppc2
+  tags: backuppc
 
 - name: set up backuppc user authorized_keys
   authorized_key:
@@ -60,6 +65,20 @@
   with_subelements:
     - "{{ backuppc_client }}"
     - authorized_keys
+  tags: backuppc
+
+- name: set up backuppc user MySQL dump authorized_keys
+  authorized_key:
+    user: "{{ item.0.username }}"
+    state: "present"
+    key_options: "{{ item.0.key_options }}"
+    key: "{{ item.1 }}"
+    manage_dir: "yes"
+  with_subelements:
+    - "{{ backuppc_client_mysql_dump }}"
+    - authorized_keys
+  when:
+    - backuppc_client_mysql_dump is defined
   tags: backuppc
 
 # TODO: task to remove old/deprecated autheorized_keys?
