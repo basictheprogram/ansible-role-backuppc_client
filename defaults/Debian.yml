@@ -1,7 +1,4 @@
 ---
-backuppc_client_packages:
-  - openssh-server
-
 known_host_keys_dir: "{{ playbook_dir }}"
 
 ssh_host_pub_keys:

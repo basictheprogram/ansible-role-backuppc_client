@@ -1,28 +1,60 @@
 ---
-# tasks file for roles/backuppc-client/debian.yml
+- name: install backuppc client packages (apt)
+  apt:
+    name: "{{ backuppc_client_packages }}"
+    state: "present"
+    install_recommends: false
+    force_apt_get: yes
+  tags: backuppc
 
-# Debian/Ubuntu specific? 
-# Not a valid option on openSUSE
+# Configuration specific to Ubuntu (but not Debian)
 #
+- name: check if ansible_distribution is Ubuntu
+  include_tasks: ubuntu.yml
+  when: ansible_distribution == 'Ubuntu'
+
 - name: accept ssh-dss key types
   lineinfile:
     dest: /etc/ssh/sshd_config
     state: present
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
     line: "PubkeyAcceptedKeyTypes +ssh-dss"
+    validate: "sshd -T -f %s"
   when:
-    - ansible_lsb.major_release|int >= 16
+    - ansible_distribution != 'Ubuntu'
+    - ansible_lsb.major_release|int >= 10
   notify:
     - reload sshd
   tags: backuppc
 
-- name: remove ssh-dss key types 
-  lineinfile:
-    dest: /etc/ssh/sshd_config
-    state: absent
-    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+# Leave this task, I'm guessing we will need it when the backuppc
+# server has an OS dist-upgrade
+#
+# - name: remove ssh-dss key types
+#   lineinfile:
+#     dest: /etc/ssh/sshd_config
+#     state: absent
+#     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+#     validate: "sshd -T -f %s"
+#   when:
+#     - ansible_distribution != 'Ubuntu'
+#     - ansible_lsb.major_release|int >= 10
+#   notify:
+#     - reload sshd
+#   tags: backuppc
+
+# Debian release 10 and newer have /etc/sudoer.d/
+#
+- name: add backuppc user to sudoers.d
+  copy:
+    content: |
+      {{ item.username }} ALL=NOPASSWD:/usr/bin/rsync
+
+    dest: "/etc/sudoers.d/{{ item.username }}"
+    mode: "0440"
+  with_items:
+    - "{{ backuppc_client }}"
   when:
-    - ansible_lsb.major_release|int < 16
-  notify:
-    - reload sshd
+    - ansible_distribution != 'Ubuntu'
+    - ansible_lsb.major_release|int >= 10
   tags: backuppc

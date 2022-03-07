@@ -12,4 +12,3 @@
     name: sshd
     state: restarted
   tags: bootstrap
-  

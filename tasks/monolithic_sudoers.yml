@@ -1,0 +1,20 @@
+---
+# Tasks to handle monolithic sudoers files.
+#
+- name: backup sudoers
+  include_tasks: "{{ role_path }}/../lib/sudo-safety-backup.yml"
+  tags: backuppc
+
+- name: add backuppc user to sudoers
+  lineinfile:
+    dest: "/etc/sudoers.tmp"
+    state: "present"
+    regexp: "^{{ item.username }}"
+    line: "{{ item.username }} ALL=NOPASSWD:/usr/bin/rsync"
+  with_items:
+    - "{{ backuppc_client }}"
+  tags: backuppc
+
+- name: restore sudoers
+  include_tasks: "{{ role_path }}/../lib/sudo-safety-restore.yml"
+  tags: backuppc
