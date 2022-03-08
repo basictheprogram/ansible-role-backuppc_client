@@ -4,15 +4,14 @@
   become: true
 
   vars:
-    prepare_postfix_relay_packages:
+    prepare_packages:
       - dialog
       - less
       - vim-tiny
 
-
   environment:
-    TZ: "America/Chicago"   # Keep tzdata pacakge happy
-    DEBIAN_FRONTEND: "noninteractive"
+      TZ: "America/Chicago" # Keep tzdata pacakge happy
+      DEBIAN_FRONTEND: "noninteractive"
 
   pre_tasks:
 
@@ -29,24 +28,9 @@
       changed_when: false
       when: ansible_os_family == 'Debian'
 
-    - name: PREPARE helper packages
+    - name: PREPARE install packages
       apt:
-        name: "{{ prepare_postfix_relay_packages }}"
+        name: "{{ prepare_packages }}"
         state: present
         install_recommends: no
         force_apt_get: yes
-
-    - name: PREPARE install openssh server
-      apt:
-        name: openssh-server
-        state: present
-        force_apt_get: yes
-      changed_when: false
-      when: ansible_os_family == 'Debian'
-
-    - name: PREPARE start openssh server
-      service:
-        name: ssh
-        state: restarted
-      changed_when: false
-      when: ansible_os_family == 'Debian'
