@@ -1,6 +1,6 @@
 ---
-# tasks file for roles/backuppc-client
-- debug:
+- name: release, distribution, family
+  debug:
     msg: "{{ ansible_distribution_release }}:{{ ansible_distribution }}:{{ ansible_os_family }}"
   tags: backuppc
 
@@ -22,7 +22,8 @@
         - "vars"
   tags: backuppc
 
-- import_tasks: debian.yml
+- name: import_tasks debian.yml
+  import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
 
 # Tasks after this comment (are hopefully) common to a linux bases operating
@@ -83,7 +84,8 @@
 
 # TODO: task to remove old/deprecated autheorized_keys?
 
-- include_tasks: "{{ role_path }}/../lib/sudo-safety-backup.yml"
+- name: sudo backup
+  import_tasks: "{{ common_library }}/sudo-safety-backup.yml"
   tags: backuppc
 
 - name: delete old backuppc user from sudoers (monolithic)
@@ -95,7 +97,8 @@
     - "{{ deprecated_backuppc_username }}"
   tags: backuppc
 
-- include_tasks: "{{ role_path }}/../lib/sudo-safety-restore.yml"
+- name: sudo restore
+  import_tasks: "{{ common_library }}/sudo-safety-restore.yml"
   tags: backuppc
 
 - name: delete old backuppc user from sudoers.d

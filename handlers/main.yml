@@ -1,6 +1,4 @@
 ---
-# handlers file for roles/backuppc-client
-
 - name: reload sshd
   service:
     name: ssh
