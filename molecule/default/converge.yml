@@ -1,28 +1,28 @@
 ---
-  - name: Molecule converge
-    hosts: all
-    become: true
+- name: Molecule converge
+  hosts: all
+  become: true
 
-    vars:
-      common_library: "../lib"
-      deprecated_backuppc_username: []
-      backuppc_client:
-        - username: 'rsyncbackup'
-          home: '/var/lib/rsyncbackup'
-          shell: '/bin/bash'
-          comment: 'BackupPC User'
-          authorized_keys: []
-          key_options: ''
+  vars:
+    common_library: "../lib"
+    deprecated_backuppc_username: []
+    backuppc_client:
+      - username: 'rsyncbackup'
+        home: '/var/lib/rsyncbackup'
+        shell: '/bin/bash'
+        comment: 'BackupPC User'
+        authorized_keys: []
+        key_options: ''
 
-    environment:
-      TZ: "America/Chicago"   # Keep tzdata pacakge happy
-      DEBIAN_FRONTEND: "noninteractive"
+  environment:
+    TZ: "America/Chicago"   # Keep tzdata pacakge happy
+    DEBIAN_FRONTEND: "noninteractive"
 
-    pre_tasks:
+  pre_tasks:
 
-    # Order matters. Must have a default-mta setup before the backuppc-server
-    # roles is run and I don't know if it's better to put the MTA configuratio
-    # into the molecule testing or make a dependency in the meta file
-    #
-    roles:
-      - role: real_time_com.backuppc_client
+  # Order matters. Must have a default-mta setup before the backuppc-server
+  # roles is run and I don't know if it's better to put the MTA configuratio
+  # into the molecule testing or make a dependency in the meta file
+  #
+  roles:
+  # - role: real_time_com.backuppc_client

@@ -2,30 +2,32 @@
 # Tasks to handle monolithic sudoers files.
 #
 - name: copy sudoers file for safety
-  command: "cp -f /etc/sudoers /etc/sudoers.tmp"
+  ansible.builtin.command: "cp -f /etc/sudoers /etc/sudoers.tmp"
   register: result
   failed_when: result.rc != 0
-  changed_when: False
+  changed_when: false
   tags: backuppc
 
 - name: add backuppc user to sudoers
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "/etc/sudoers.tmp"
     state: "present"
-    regexp: "^{{ item.username }}"
-    line: "{{ item.username }} ALL=NOPASSWD:/usr/bin/rsync"
-  with_items:
+    regexp: "^{{ backuppc_client_item.username }}"
+    line: "{{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync"
+  loop:
     - "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
   tags: backuppc
 
 - name: final sudoers file check
-  shell: "/usr/sbin/visudo -q -c -f /etc/sudoers.tmp && cp -f /etc/sudoers.tmp /etc/sudoers"
+  ansible.builtin.shell: "/usr/sbin/visudo -q -c -f /etc/sudoers.tmp && cp -f /etc/sudoers.tmp /etc/sudoers"
   register: result
   failed_when: result.rc != 0
-  changed_when: False
+  changed_when: false
 
 - name: clean up temp file
-  file:
+  ansible.builtin.file:
     path: "/etc/sudoers.tmp"
     state: "absent"
-  changed_when: False
+  changed_when: false

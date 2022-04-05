@@ -3,7 +3,7 @@
 # Not a valid option on openSUSE
 #
 - name: UBUNTU accept ssh-dss key types
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/ssh/sshd_config
     state: present
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
@@ -20,7 +20,7 @@
   # Does this break with Debian?
   #
 - name: UBUNTU configure openssh server (ubuntu 20.04+)
-  copy:
+  ansible.builtin.copy:
     src: files/etc/ssh/sshd_config.d/
     dest: /etc/ssh/sshd_config.d
     owner: root
@@ -34,7 +34,7 @@
   tags: backuppc
 
 - name: UBUNTU remove ssh-dss key types
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/ssh/sshd_config
     state: absent
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
@@ -53,30 +53,43 @@
     - ansible_lsb.major_release|int < 20
   tags: backuppc
 
+- name: debug backuppc_client username
+  ansible.builtin.debug:
+    msg: "{{ backuppc_client_item }}"
+  loop:
+    "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  tags: backuppc
+
 # Ubuntu releases 20.04 and newer have /etc/sudoer.d/
 #
 - name: UBUNTU add backuppc user to sudoers.d
-  copy:
+  ansible.builtin.copy:
     content: |
-      {{ item.username }} ALL=NOPASSWD:/usr/bin/rsync
+      {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
 
-    dest: "/etc/sudoers.d/{{ item.username }}"
+    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
     mode: "0440"
-  with_items:
-    - "{{ backuppc_client }}"
+  loop:
+    "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
   when:
     - ansible_lsb.major_release|int >= 20
   tags: backuppc
 
 - name: UBUNTU add backuppc user MySQL dump to sudoers.d
-  copy:
+  ansible.builtin.copy:
     content: |
-      {{ item.username }} ALL=NOPASSWD:{{ mysql_dump_script }}
+      {{ backuppc_client_item.username }} ALL=NOPASSWD:{{ mysql_dump_script }}
 
-    dest: "/etc/sudoers.d/{{ item.username }}_mysql_dump"
+    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_mysql_dump"
     mode: "0440"
-  with_items:
+  loop:
     - "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
   when:
     - ansible_lsb.major_release|int >= 20
     - mysql_dump_script is defined

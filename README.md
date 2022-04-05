@@ -16,15 +16,15 @@ backuppc_client:
       comment: 'BackupPC User'
       authorized_keys: ''
       key_options: 'command=\"sudo /usr/bin/rsync --server --sender -logDtpr --delete --numeric-ids --block-size=2048
-          --exclude=''/proc/*'' 
-          --exclude=''/sys/*'' 
-          --exclude=''/mnt/*'' 
-          --exclude=''/tmp/*'' 
-          --exclude=''/var/tmp/*'' 
-          --exclude=''/var/cache/apt/archives/*'' 
-          --exclude=''/var/log/*/*'' 
-          --exclude=''/var/log/*.*'' 
-          --exclude=''*.iso'' 
+          --exclude=''/proc/*''
+          --exclude=''/sys/*''
+          --exclude=''/mnt/*''
+          --exclude=''/tmp/*''
+          --exclude=''/var/tmp/*''
+          --exclude=''/var/cache/apt/archives/*''
+          --exclude=''/var/log/*/*''
+          --exclude=''/var/log/*.*''
+          --exclude=''*.iso''
           --exclude=''*.ova'' . /\",
           no-port-forwarding,no-X11-forwarding,no-agent-forwarding'
 ```
@@ -42,5 +42,5 @@ A list of other roles hosted on Galaxy should go here, plus any details in regar
 BSD
 
 ## Author Information ##
-[Real Time Enterprises Inc.](http://www.real-time.com), 
+[Real Time Enterprises Inc.](http://www.real-time.com),
 [Bob Tanner](https://github.com/basictheprogram)

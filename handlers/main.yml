@@ -1,12 +1,12 @@
 ---
 - name: reload sshd
-  service:
+  ansible.builtin.service:
     name: ssh
     state: reloaded
   tags: bootstrap
 
 - name: restart sshd
-  service:
+  ansible.builtin.service:
     name: sshd
     state: restarted
   tags: bootstrap

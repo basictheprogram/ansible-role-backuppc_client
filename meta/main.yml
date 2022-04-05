@@ -1,23 +1,23 @@
 ---
-  dependencies: []
+dependencies: []
 
-  galaxy_info:
-    author: real_time_com
-    role_name: backuppc_client
-    description: Configure a BackupPC client
-    company: Real Time Enterprises, Inc.
-    license: license (BSD, MIT)
-    min_ansible_version: 2.9
-    platforms:
-      - name: Debian
-        version:
-          - buster
-      - name: Ubuntu
-        versions:
-          - bionic
-          - focal
-          - xenial
-    galaxy_tags:
-      - debian
-      - linux
-      - ubuntu
+galaxy_info:
+  author: real_time_com
+  role_name: backuppc_client
+  description: Configure a BackupPC client
+  company: Real Time Enterprises, Inc.
+  license: license (BSD, MIT)
+  min_ansible_version: 2.9
+  platforms:
+    - name: Debian
+      version:
+        - buster
+    - name: Ubuntu
+      versions:
+        - bionic
+        - focal
+        - xenial
+  galaxy_tags:
+    - debian
+    - linux
+    - ubuntu

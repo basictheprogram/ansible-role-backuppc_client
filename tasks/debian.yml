@@ -1,10 +1,10 @@
 ---
 - name: install backuppc client packages (apt)
-  apt:
+  ansible.builtin.apt:
     name: "{{ backuppc_client_packages }}"
     state: "present"
     install_recommends: false
-    force_apt_get: yes
+    force_apt_get: true
   tags: backuppc
 
 # Configuration specific to Ubuntu (but not Debian)
@@ -15,7 +15,7 @@
   tags: backuppc
 
 - name: accept ssh-dss key types
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/ssh/sshd_config
     state: present
     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
@@ -47,21 +47,23 @@
 # Debian release 10 and newer have /etc/sudoer.d/
 #
 - name: add backuppc user to sudoers.d
-  copy:
+  ansible.builtin.copy:
     content: |
-      {{ item.username }} ALL=NOPASSWD:/usr/bin/rsync
+      {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
 
-    dest: "/etc/sudoers.d/{{ item.username }}"
+    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
     mode: "0440"
-  with_items:
+  loop:
     - "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
   when:
     - ansible_distribution != 'Ubuntu'
     - ansible_lsb.major_release|int >= 10
   tags: backuppc
 
 - name: copy MySQL dump script
-  copy:
+  ansible.builtin.copy:
     src: dump_mysql.sh
     dest: "{{ mysql_dump_script }}"
     mode: "0750"
@@ -70,7 +72,7 @@
   tags: backuppc
 
 - name: create /root/.config
-  file:
+  ansible.builtin.file:
     path: /root/.config/
     state: directory
     owner: root
@@ -81,7 +83,7 @@
   tags: backuppc
 
 - name: touch dumpdb.sh.config
-  file:
+  ansible.builtin.file:
     path: /root/.config/dumpdb.sh.config
     state: touch
     owner: root

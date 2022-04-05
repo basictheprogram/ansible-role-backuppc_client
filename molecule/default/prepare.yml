@@ -10,8 +10,8 @@
       - vim-tiny
 
   environment:
-      TZ: "America/Chicago" # Keep tzdata pacakge happy
-      DEBIAN_FRONTEND: "noninteractive"
+    TZ: "America/Chicago"    # Keep tzdata pacakge happy
+    DEBIAN_FRONTEND: "noninteractive"
 
   pre_tasks:
 
@@ -19,7 +19,7 @@
 
   tasks:
     - name: PREPARE update apt cache
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 3600
         force_apt_get: true
@@ -29,8 +29,8 @@
       when: ansible_os_family == 'Debian'
 
     - name: PREPARE install packages
-      apt:
+      ansible.builtin.apt:
         name: "{{ prepare_packages }}"
         state: present
-        install_recommends: no
-        force_apt_get: yes
+        install_recommends: false
+        force_apt_get: true
