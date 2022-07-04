@@ -14,19 +14,10 @@
   when: ansible_distribution == 'Ubuntu'
   tags: backuppc
 
-- name: accept ssh-dss key types
-  ansible.builtin.lineinfile:
-    dest: /etc/ssh/sshd_config
-    state: present
-    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-    line: "PubkeyAcceptedKeyTypes +ssh-dss"
-    validate: "sshd -T -f %s"
+- name: dump mysql databases
+  include_tasks: mysql_dump.yml
   when:
-    - ansible_distribution != 'Ubuntu'
-    - ansible_lsb.major_release|int >= 10
-  notify:
-    - restart sshd
-  tags: backuppc
+     - mysql_dump_script is defined
 
 # Leave this task, I'm guessing we will need it when the backuppc
 # server has an OS dist-upgrade
@@ -43,52 +34,3 @@
 #   notify:
 #     - reload sshd
 #   tags: backuppc
-
-# Debian release 10 and newer have /etc/sudoer.d/
-#
-- name: add backuppc user to sudoers.d
-  ansible.builtin.copy:
-    content: |
-      {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
-
-    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
-    mode: "0440"
-  loop:
-    - "{{ backuppc_client }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  when:
-    - ansible_distribution != 'Ubuntu'
-    - ansible_lsb.major_release|int >= 10
-  tags: backuppc
-
-- name: copy MySQL dump script
-  ansible.builtin.copy:
-    src: dump_mysql.sh
-    dest: "{{ mysql_dump_script }}"
-    mode: "0750"
-  when:
-    - mysql_dump_script is defined
-  tags: backuppc
-
-- name: create /root/.config
-  ansible.builtin.file:
-    path: /root/.config/
-    state: directory
-    owner: root
-    group: root
-    mode: 0750
-  when:
-    - mysql_dump_script is defined
-  tags: backuppc
-
-- name: touch dumpdb.sh.config
-  ansible.builtin.file:
-    path: /root/.config/dumpdb.sh.config
-    state: touch
-    owner: root
-    group: root
-    mode: 0640
-  when:
-    - mysql_dump_script is defined
-  tags: backuppc

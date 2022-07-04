@@ -13,3 +13,31 @@
   loop_control:
     loop_var: backuppc_client_item
   tags: backuppc_client
+
+- name: add backuppc user to sudoers.d
+  ansible.builtin.copy:
+    content: |
+      {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
+
+    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
+    mode: "0440"
+  loop:
+    "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  tags: backuppc_client
+
+- name: add backuppc user MySQL dump to sudoers.d
+  ansible.builtin.copy:
+    content: |
+      {{ backuppc_client_item.username }} ALL=NOPASSWD:{{ mysql_dump_script }}
+
+    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_mysql_dump"
+    mode: "0440"
+  loop:
+    - "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  when:
+    - mysql_dump_script is defined
+  tags: backuppc

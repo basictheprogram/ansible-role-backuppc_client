@@ -4,7 +4,6 @@
   become: true
 
   vars:
-    common_library: "../lib"
     deprecated_backuppc_username: []
     backuppc_client:
       - username: 'rsyncbackup'

@@ -7,6 +7,7 @@
     prepare_packages:
       - dialog
       - less
+      - openssh-server    # needed for testing backuppc ssh keys
       - vim-tiny
 
   environment:
@@ -14,19 +15,18 @@
     DEBIAN_FRONTEND: "noninteractive"
 
   tasks:
-    - name: PREPARE update apt cache
+    - name: PREPARE install packages
       ansible.builtin.apt:
+        name: "{{ prepare_packages }}"
+        state: present
         update_cache: true
         cache_valid_time: 3600
+        install_recommends: false
         force_apt_get: true
         autoremove: true
         autoclean: true
       changed_when: false
       when: ansible_os_family == 'Debian'
 
-    - name: PREPARE install packages
-      ansible.builtin.apt:
-        name: "{{ prepare_packages }}"
-        state: present
-        install_recommends: false
-        force_apt_get: true
+    - name: restart sshd
+      ansible.builtin.command: /etc/init.d/ssh restart

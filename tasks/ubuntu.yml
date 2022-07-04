@@ -1,96 +1,65 @@
 ---
-# Debian/Ubuntu specific?
-# Not a valid option on openSUSE
-#
-- name: UBUNTU accept ssh-dss key types
-  ansible.builtin.lineinfile:
-    dest: /etc/ssh/sshd_config
-    state: present
-    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-    line: "PubkeyAcceptedKeyTypes +ssh-dss"
-    validate: "sshd -T -f %s"
+- name: ubuntu major_release >= 20
+  block:
+    - name: configure openssh server (ubuntu 20.04+)
+      ansible.builtin.copy:
+        src: files/etc/ssh/sshd_config.d/
+        dest: /etc/ssh/sshd_config.d
+        owner: root
+        group: root
+        mode: "0400"
+        validate: "sshd -T -f %s"
+      notify:
+        - reload sshd
+      tags: backuppc_client
+  when:
+    - ansible_lsb.major_release|int >= 20
+
+- name: ubuntu major_release >= 16 and major_release < 20
+  block:
+    - name: accept ssh-dss key types
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        state: present
+        regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+        line: "PubkeyAcceptedKeyTypes +ssh-dss"
+        validate: "sshd -T -f %s"
+      notify:
+        - reload sshd
+      tags: backuppc_client
   when:
     - ansible_lsb.major_release|int >= 16
     - ansible_lsb.major_release|int < 20
-  notify:
-    - reload sshd
-  tags: backuppc
 
-  # Ubuntu 20.04 has /etc/ssh/sshd_config.d use it!
-  # Does this break with Debian?
-  #
-- name: UBUNTU configure openssh server (ubuntu 20.04+)
-  ansible.builtin.copy:
-    src: files/etc/ssh/sshd_config.d/
-    dest: /etc/ssh/sshd_config.d
-    owner: root
-    group: root
-    mode: "0400"
-    validate: "sshd -T -f %s"
+- name: ubuntu major_release < 16 or major_release >= 20
+  block:
+    # - name: UBUNTU remove ssh-dss key types
+    #   ansible.builtin.lineinfile:
+    #     dest: /etc/ssh/sshd_config
+    #     state: absent
+    #     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+    #     validate: "sshd -T -f %s"
+    #   notify:
+    #     - reload sshd
+    #   tags: backuppc_client
+
+    - name: accept ssh-dss key types
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        state: present
+        regexp: "^PubkeyAcceptedKeyTypes(.*)$"
+        line: "PubkeyAcceptedKeyTypes +ssh-dss"
+        validate: "sshd -T -f %s"
+      notify:
+        - reload sshd
+      tags: backuppc_client
+
   when:
-    - ansible_lsb.major_release|int >= 20
-  notify:
-    - reload sshd
-  tags: backuppc
+      - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
 
-- name: UBUNTU remove ssh-dss key types
-  ansible.builtin.lineinfile:
-    dest: /etc/ssh/sshd_config
-    state: absent
-    regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-    validate: "sshd -T -f %s"
-  when:
-    - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
-  notify:
-    - reload sshd
-  tags: backuppc
 
-# Ubuntu release older than 20.04 (Focal) use the monolithic /etc/sudoers file
-#
-- name: UBUNTU add backuppc user to monolithic sudoers file
-  import_tasks: monolithic_sudoers.yml
-  when:
-    - ansible_lsb.major_release|int < 20
-  tags: backuppc
-
-- name: debug backuppc_client username
+- name: Unsupported release
   ansible.builtin.debug:
-    msg: "{{ backuppc_client_item }}"
-  loop:
-    "{{ backuppc_client }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  tags: backuppc
-
-# Ubuntu releases 20.04 and newer have /etc/sudoer.d/
-#
-- name: UBUNTU add backuppc user to sudoers.d
-  ansible.builtin.copy:
-    content: |
-      {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
-
-    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
-    mode: "0440"
-  loop:
-    "{{ backuppc_client }}"
-  loop_control:
-    loop_var: backuppc_client_item
+    msg: "Ubuntu {{ ansible_distribution_release }} is not supported"
   when:
-    - ansible_lsb.major_release|int >= 20
-  tags: backuppc
-
-- name: UBUNTU add backuppc user MySQL dump to sudoers.d
-  ansible.builtin.copy:
-    content: |
-      {{ backuppc_client_item.username }} ALL=NOPASSWD:{{ mysql_dump_script }}
-
-    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_mysql_dump"
-    mode: "0440"
-  loop:
-    - "{{ backuppc_client }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  when:
-    - ansible_lsb.major_release|int >= 20
-    - mysql_dump_script is defined
-  tags: backuppc
+    - ansible_lsb.major_release|int < 16
