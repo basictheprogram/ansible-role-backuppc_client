@@ -1,0 +1,15 @@
+---
+- name: debug
+  ansible.builtin.debug:
+    msg: "/etc/sudoers.d"
+  tags: backuppc_client
+
+- name: delete old backuppc user from sudoers.d
+  ansible.builtin.file:
+    path: "/etc/sudoers.d/{{ backuppc_client_item }}"
+    state: absent
+  loop:
+    "{{ deprecated_backuppc_username }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  tags: backuppc_client

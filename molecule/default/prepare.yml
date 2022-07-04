@@ -1,5 +1,5 @@
 ---
-- name: Prepare molecule tests
+- name: prepare
   hosts: all
   become: true
 
@@ -12,10 +12,6 @@
   environment:
     TZ: "America/Chicago"    # Keep tzdata pacakge happy
     DEBIAN_FRONTEND: "noninteractive"
-
-  pre_tasks:
-
-  roles:
 
   tasks:
     - name: PREPARE update apt cache

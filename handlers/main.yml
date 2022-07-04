@@ -3,10 +3,10 @@
   ansible.builtin.service:
     name: ssh
     state: reloaded
-  tags: bootstrap
+  tags: backuippc_client
 
 - name: restart sshd
   ansible.builtin.service:
     name: sshd
     state: restarted
-  tags: bootstrap
+  tags: backuippc_client

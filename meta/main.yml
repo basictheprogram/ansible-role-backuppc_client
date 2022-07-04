@@ -7,7 +7,7 @@ galaxy_info:
   description: Configure a BackupPC client
   company: Real Time Enterprises, Inc.
   license: license (BSD, MIT)
-  min_ansible_version: 2.9
+  min_ansible_version: "2.9"
   platforms:
     - name: Debian
       version:
@@ -16,6 +16,7 @@ galaxy_info:
       versions:
         - bionic
         - focal
+        - jammy
         - xenial
   galaxy_tags:
     - debian

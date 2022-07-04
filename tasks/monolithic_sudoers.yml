@@ -1,12 +1,7 @@
 ---
-# Tasks to handle monolithic sudoers files.
-#
-- name: copy sudoers file for safety
-  ansible.builtin.command: "cp -f /etc/sudoers /etc/sudoers.tmp"
-  register: result
-  failed_when: result.rc != 0
-  changed_when: false
-  tags: backuppc
+- name: sudo backup
+  include_tasks: "{{ common_library }}/sudo-safety-backup.yml"
+  tags: backuppc_client
 
 - name: add backuppc user to sudoers
   ansible.builtin.lineinfile:
@@ -14,20 +9,29 @@
     state: "present"
     regexp: "^{{ backuppc_client_item.username }}"
     line: "{{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync"
-  loop:
-    - "{{ backuppc_client }}"
+  loop: "{{ backuppc_client }}"
   loop_control:
     loop_var: backuppc_client_item
-  tags: backuppc
+  tags: backuppc_client
 
-- name: final sudoers file check
-  ansible.builtin.shell: "/usr/sbin/visudo -q -c -f /etc/sudoers.tmp && cp -f /etc/sudoers.tmp /etc/sudoers"
-  register: result
-  failed_when: result.rc != 0
-  changed_when: false
+- name: delete old backuppc user from sudoers (monolithic)
+  ansible.builtin.lineinfile:
+    dest: "/etc/sudoers.tmp"
+    state: "absent"
+    regexp: "^{{ backuppc_client_item }}"
+  loop:
+    "{{ deprecated_backuppc_username }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  tags: backuppc_client
+
+- name: sudo restore
+  include_tasks: "{{ common_library }}/sudo-safety-restore.yml"
+  tags: backuppc_client
 
 - name: clean up temp file
   ansible.builtin.file:
     path: "/etc/sudoers.tmp"
     state: "absent"
   changed_when: false
+  tags: backuppc_client

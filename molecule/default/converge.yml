@@ -1,5 +1,5 @@
 ---
-- name: Molecule converge
+- name: converge
   hosts: all
   become: true
 
@@ -18,11 +18,7 @@
     TZ: "America/Chicago"   # Keep tzdata pacakge happy
     DEBIAN_FRONTEND: "noninteractive"
 
-  pre_tasks:
-
-  # Order matters. Must have a default-mta setup before the backuppc-server
-  # roles is run and I don't know if it's better to put the MTA configuratio
-  # into the molecule testing or make a dependency in the meta file
-  #
-  roles:
-  # - role: real_time_com.backuppc_client
+  tasks:
+    - name: include_role backuppc_client
+      ansible.builtin.include_role:
+        name: "backuppc_client"

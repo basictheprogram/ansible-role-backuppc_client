@@ -2,12 +2,12 @@
 - name: release, distribution, family
   ansible.builtin.debug:
     msg: "{{ ansible_distribution_release }}:{{ ansible_distribution }}:{{ ansible_os_family }}"
-  tags: backuppc
+  tags: backuppc_client
 
 - name: group_names
   ansible.builtin.debug:
     msg: "{{ group_names }}"
-  tags: backuppc
+  tags: backuppc_client
 
 - name: gather OS specific variables
   ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
@@ -17,10 +17,10 @@
         - "{{ ansible_distribution_release }}.yml"
         - "{{ ansible_distribution }}.yml"
         - "{{ ansible_os_family }}.yml"
-        - "main.yml"
+        - "default.yml"
       paths:
         - "vars"
-  tags: backuppc
+  tags: backuppc_client
 
 - name: import_tasks debian.yml
   import_tasks: debian.yml
@@ -38,7 +38,7 @@
     "{{ deprecated_backuppc_username }}"
   loop_control:
     loop_var: backuppc_client_item
-  tags: backuppc
+  tags: backuppc_client
 
 # Look in group_vars and host_vars for default value for {{ backuppc_client }}
 #
@@ -58,7 +58,7 @@
   loop_control:
     loop_var: backuppc_client_item
   changed_when: false
-  tags: backuppc
+  tags: backuppc_client
 
 - name: set up backuppc user authorized_keys
   ansible.posix.authorized_key:
@@ -67,10 +67,10 @@
     key_options: "{{ backuppc_client_item.0.key_options }}"
     key: "{{ backuppc_client_item.1 }}"
     manage_dir: true
-  loop: "{{ backuppc_client|subelements('authorized_keys') }}"
+  loop: "{{ backuppc_client | subelements('authorized_keys') }}"
   loop_control:
     loop_var: backuppc_client_item
-  tags: backuppc
+  tags: backuppc_client
 
 - name: set up backuppc user MySQL dump authorized_keys
   ansible.posix.authorized_key:
@@ -84,38 +84,21 @@
   loop_control:
     loop_var: backuppc_client_item
   when: backuppc_client_mysql_dump is defined
-  tags: backuppc
+  tags: backuppc_client
 
 # TODO: task to remove old/deprecated autheorized_keys?
 
-- name: sudo backup
-  include_tasks: "{{ common_library }}/sudo-safety-backup.yml"
-  tags: backuppc
+- name: configure monolith /etc/sudoers file
+  import_tasks: monolithic_sudoers.yml
+  when:
+    - ansible_lsb.major_release|int < 20
+  tags: backuppc_client
 
-- name: delete old backuppc user from sudoers (monolithic)
-  ansible.builtin.lineinfile:
-    dest: "/etc/sudoers.tmp"
-    state: "absent"
-    regexp: "^{{ backuppc_client_item }}"
-  loop:
-    "{{ deprecated_backuppc_username }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  tags: backuppc
-
-- name: sudo restore
-  include_tasks: "{{ common_library }}/sudo-safety-restore.yml"
-  tags: backuppc
-
-- name: delete old backuppc user from sudoers.d
-  ansible.builtin.file:
-    path: "/etc/sudoers.d/{{ backuppc_client_item }}"
-    state: absent
-  loop:
-    "{{ deprecated_backuppc_username }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  tags: backuppc
+- name: configure /etc/sudoers.d
+  import_tasks: sudoers_d.yml
+  when:
+    - ansible_lsb.major_release|int >= 20
+  tags: backuppc_client
 
 # Can override the location "{{ known_host_keys_dir }}"
 # default is in defaults/main.yml
@@ -128,7 +111,7 @@
 #      - "{{ ssh_host_pub_keys }}"
 #  ignore_errors: yes
 #  register: ssh_host_keys
-#  tags: backuppc
+#  tags: backuppc_client
 #
 # - debug:
 #    msg: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
@@ -137,7 +120,7 @@
 #  with_items:
 #    - "{{ ssh_host_keys.results }}"
 #  ignore_errors: yes
-#  tags: backuppc
+#  tags: backuppc_client
 #
 # - name: add ssh host key to backuppc known_hosts
 #  known_hosts:
@@ -154,4 +137,4 @@
 #  remote_user: ansible
 #  changed_when:
 #    - item.changed
-#  tags: backuppc
+#  tags: backuppc_client
