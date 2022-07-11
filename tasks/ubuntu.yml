@@ -55,7 +55,7 @@
       tags: backuppc_client
 
   when:
-      - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
+    - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
 
 
 - name: Unsupported release

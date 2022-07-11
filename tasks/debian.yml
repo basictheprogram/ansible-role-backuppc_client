@@ -17,7 +17,7 @@
 - name: dump mysql databases
   include_tasks: mysql_dump.yml
   when:
-     - mysql_dump_script is defined
+    - mysql_dump_script is defined
 
 # Leave this task, I'm guessing we will need it when the backuppc
 # server has an OS dist-upgrade

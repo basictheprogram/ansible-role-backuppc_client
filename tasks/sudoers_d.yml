@@ -21,8 +21,7 @@
 
     dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
     mode: "0440"
-  loop:
-    "{{ backuppc_client }}"
+  loop: "{{ backuppc_client }}"
   loop_control:
     loop_var: backuppc_client_item
   tags: backuppc_client
@@ -34,8 +33,7 @@
 
     dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_mysql_dump"
     mode: "0440"
-  loop:
-    - "{{ backuppc_client }}"
+  loop: "{{ backuppc_client }}"
   loop_control:
     loop_var: backuppc_client_item
   when:
