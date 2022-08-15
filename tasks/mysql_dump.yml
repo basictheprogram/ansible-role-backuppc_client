@@ -8,7 +8,7 @@
     msg: "{{ backup_client_item.0.username }} - {{ backup_client_item.1 }}"
   loop: "{{ backuppc_client_mysql_dump | subelements('authorized_keys') }}"
   loop_control:
-    loop_control: backup_client_item
+    loop_var: backuppc_client_item
 
 - name: set up backuppc user MySQL dump authorized_keys
   ansible.posix.authorized_key:
