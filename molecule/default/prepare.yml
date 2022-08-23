@@ -28,5 +28,5 @@
       changed_when: false
       when: ansible_os_family == 'Debian'
 
-    - name: restart sshd
+    - name: Restart sshd    # noqa no-changed-when
       ansible.builtin.command: /etc/init.d/ssh restart

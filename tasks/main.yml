@@ -1,15 +1,15 @@
 ---
-- name: release, distribution, family
+- name: Release, distribution, family
   ansible.builtin.debug:
     msg: "{{ ansible_distribution_release }}:{{ ansible_distribution }}:{{ ansible_os_family }}"
   tags: backuppc_client
 
-- name: group_names
+- name: Group_names
   ansible.builtin.debug:
     msg: "{{ group_names }}"
   tags: backuppc_client
 
-- name: gather OS specific variables
+- name: Gather OS specific variables
   ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
   vars:
     params:
@@ -22,14 +22,14 @@
         - "vars"
   tags: backuppc_client
 
-- name: import_tasks debian.yml
+- name: Import_tasks debian.yml
   import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
 
 # Tasks after this comment (are hopefully) common to a linux bases operating
 # systems?
 #
-- name: delete old backuppc users
+- name: Delete old backuppc users
   ansible.builtin.user:
     name: "{{ backuppc_client_item.username }}"
     state: "absent"
@@ -42,7 +42,7 @@
 
 # Look in group_vars and host_vars for default value for {{ backuppc_client }}
 #
-- name: create backuppc user    # noqa no-log-password
+- name: Create backuppc user    # noqa no-log-password
   ansible.builtin.user:
     name: "{{ backuppc_client_item.username }}"
     shell: "{{ backuppc_client_item.shell }}"
@@ -60,7 +60,7 @@
   changed_when: false
   tags: backuppc_client
 
-- name: set up backuppc user authorized_keys
+- name: Set up backuppc user authorized_keys
   ansible.posix.authorized_key:
     user: "{{ backuppc_client_item.0.username }}"
     state: "present"
@@ -74,13 +74,13 @@
 
 # TODO: task to remove old/deprecated autheorized_keys?
 
-- name: configure monolith /etc/sudoers file
+- name: Configure monolith /etc/sudoers file
   import_tasks: monolithic_sudoers.yml
   when:
     - ansible_lsb.major_release|int < 20
   tags: backuppc_client
 
-- name: configure /etc/sudoers.d
+- name: Configure /etc/sudoers.d
   import_tasks: sudoers_d.yml
   when:
     - ansible_lsb.major_release|int >= 20

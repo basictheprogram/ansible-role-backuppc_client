@@ -1,7 +1,7 @@
 ---
-- name: ubuntu major_release >= 20
+- name: Ubuntu major_release >= 20
   block:
-    - name: configure openssh server (ubuntu 20.04+)
+    - name: Configure openssh server (ubuntu 20.04+)
       ansible.builtin.copy:
         src: files/etc/ssh/sshd_config.d/
         dest: /etc/ssh/sshd_config.d
@@ -15,9 +15,9 @@
   when:
     - ansible_lsb.major_release|int >= 20
 
-- name: ubuntu major_release >= 16 and major_release < 20
+- name: Ubuntu major_release >= 16 and major_release < 20
   block:
-    - name: accept ssh-dss key types
+    - name: Accept ssh-dss key types
       ansible.builtin.lineinfile:
         dest: /etc/ssh/sshd_config
         state: present
@@ -31,7 +31,7 @@
     - ansible_lsb.major_release|int >= 16
     - ansible_lsb.major_release|int < 20
 
-- name: ubuntu major_release < 16 or major_release >= 20
+- name: Ubuntu major_release < 16 or major_release >= 20
   block:
     # - name: UBUNTU remove ssh-dss key types
     #   ansible.builtin.lineinfile:
@@ -43,7 +43,7 @@
     #     - reload sshd
     #   tags: backuppc_client
 
-    - name: accept ssh-dss key types
+    - name: Accept ssh-dss key types
       ansible.builtin.lineinfile:
         dest: /etc/ssh/sshd_config
         state: present

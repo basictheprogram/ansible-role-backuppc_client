@@ -16,7 +16,22 @@ repos:
       - id: file-contents-sorter
         files: requirements.txt|\.gitignore|\.dockerignore
 
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.27.1
+    hooks:
+      - id: yamllint
+        files: \.(yaml|yml)$
+        types: [file, yaml]
+        entry: yamllint --strict -f parsable
+
+  - repo: https://github.com/ansible/ansible-lint.git
+    rev: v6.5.0
+    hooks:
+      - id: ansible-lint
+        files: \.(yaml|yml)$
+        entry: ansible-lint  --force-color -v
+
   - repo: https://github.com/zricethezav/gitleaks
-    rev: v8.10.3
+    rev: v8.11.0
     hooks:
       - id: gitleaks

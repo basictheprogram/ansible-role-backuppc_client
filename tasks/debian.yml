@@ -1,5 +1,5 @@
 ---
-- name: install backuppc client packages (apt)
+- name: Install backuppc client packages (apt)
   ansible.builtin.apt:
     name: "{{ backuppc_client_packages }}"
     state: "present"
@@ -9,12 +9,12 @@
 
 # Configuration specific to Ubuntu (but not Debian)
 #
-- name: check if ansible_distribution is Ubuntu
+- name: Check if ansible_distribution is Ubuntu
   include_tasks: ubuntu.yml
   when: ansible_distribution == 'Ubuntu'
   tags: backuppc
 
-- name: dump mysql databases
+- name: Dump mysql databases
   include_tasks: mysql_dump.yml
   when:
     - mysql_dump_script is defined
