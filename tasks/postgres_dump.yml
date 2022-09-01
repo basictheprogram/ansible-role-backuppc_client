@@ -1,0 +1,55 @@
+---
+- name: Debug backuppc_client_mysql_dump
+  ansible.builtin.debug:
+    msg: "{{ backuppc_client_mysql_dump }}"
+
+- name: Debug
+  ansible.builtin.debug:
+    msg: "{{ backup_client_item.0.username }} - {{ backup_client_item.1 }}"
+  loop: "{{ backuppc_client_mysql_dump | subelements('authorized_keys') }}"
+  loop_control:
+    loop_var: backuppc_client_item
+
+- name: Set up backuppc user MySQL dump authorized_keys
+  ansible.posix.authorized_key:
+    user: "{{ backuppc_client_item.0.username }}"
+    state: "present"
+    key_options: "{{ backuppc_client_item.0.key_options }}"
+    key: "{{ backuppc_client_item.1 }}"
+    manage_dir: true
+  loop: "{{ backuppc_client_mysql_dump | subelements('authorized_keys') }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  when: backuppc_client_mysql_dump is defined
+  tags: backuppc_client
+
+- name: Copy MySQL dump script
+  ansible.builtin.copy:
+    src: dump_mysql.sh
+    dest: "{{ mysql_dump_script }}"
+    mode: "0750"
+  when:
+    - mysql_dump_script is defined
+  tags: backuppc_client
+
+- name: Create /root/.config
+  ansible.builtin.file:
+    path: /root/.config/
+    state: directory
+    owner: root
+    group: root
+    mode: 0750
+  when:
+    - mysql_dump_script is defined
+  tags: backuppc_client
+
+- name: Touch dumpdb.sh.config
+  ansible.builtin.file:
+    path: /root/.config/dumpdb.sh.config
+    state: touch
+    owner: root
+    group: root
+    mode: 0640
+  when:
+    - mysql_dump_script is defined
+  tags: backuppc_client
