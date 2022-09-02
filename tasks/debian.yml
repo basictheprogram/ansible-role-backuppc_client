@@ -39,5 +39,5 @@
 #     - ansible_distribution != 'Ubuntu'
 #     - ansible_lsb.major_release|int >= 10
 #   notify:
-#     - reload sshd
+#     - Reload sshd
 #   tags: backuppc

@@ -10,7 +10,7 @@
         mode: "0400"
         validate: "sshd -T -f %s"
       notify:
-        - reload sshd
+        - Reload sshd
       tags: backuppc_client
   when:
     - ansible_lsb.major_release|int >= 20
@@ -40,7 +40,7 @@
     #     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
     #     validate: "sshd -T -f %s"
     #   notify:
-    #     - reload sshd
+    #     - Reload sshd
     #   tags: backuppc_client
 
     - name: Accept ssh-dss key types
@@ -51,7 +51,7 @@
         line: "PubkeyAcceptedKeyTypes +ssh-dss"
         validate: "sshd -T -f %s"
       notify:
-        - reload sshd
+        - Reload sshd
       tags: backuppc_client
 
   when:

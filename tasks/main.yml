@@ -25,6 +25,7 @@
 - name: Import_tasks debian.yml
   import_tasks: debian.yml
   when: ansible_os_family == 'Debian'
+  tags: backuppc_client
 
 # Tasks after this comment (are hopefully) common to a linux bases operating
 # systems?

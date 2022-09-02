@@ -39,3 +39,17 @@
   when:
     - mysql_dump_script is defined
   tags: backuppc
+
+- name: Add backuppc user Postgres dump to sudoers.d
+  ansible.builtin.copy:
+    content: |
+      {{ backuppc_client_item.username }} ALL=NOPASSWD:{{ postgres_dump_script }}
+
+    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_postgres_dump"
+    mode: "0440"
+  loop: "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  when:
+    - postgres_dump_script is defined
+  tags: backuppc
