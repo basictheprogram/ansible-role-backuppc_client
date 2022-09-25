@@ -29,7 +29,7 @@
 # Leave this task, I'm guessing we will need it when the backuppc
 # server has an OS dist-upgrade
 #
-# - name: remove ssh-dss key types
+# - name: Remove ssh-dss key types
 #   lineinfile:
 #     dest: /etc/ssh/sshd_config
 #     state: absent

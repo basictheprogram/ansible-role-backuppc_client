@@ -57,7 +57,6 @@
   when:
     - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
 
-
 - name: Unsupported release
   ansible.builtin.debug:
     msg: "Ubuntu {{ ansible_distribution_release }} is not supported"

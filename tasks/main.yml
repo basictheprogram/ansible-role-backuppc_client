@@ -90,7 +90,7 @@
 # Can override the location "{{ known_host_keys_dir }}"
 # default is in defaults/main.yml
 #
-# - name: fetch ssh public keys
+# - name: Fetch ssh public keys
 #  fetch:
 #    src: "/etc/ssh/{{ item }}"
 #    dest: "{{ known_host_keys_dir }}/known_host_keys"
@@ -109,7 +109,7 @@
 #  ignore_errors: yes
 #  tags: backuppc_client
 #
-# - name: add ssh host key to backuppc known_hosts
+# - name: Add ssh host key to backuppc known_hosts
 #  known_hosts:
 #    path: /etc/ssh/ssh_known_hosts
 #    name: "{{ ansible_fqdn }}"

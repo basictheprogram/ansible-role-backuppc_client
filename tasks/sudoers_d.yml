@@ -14,7 +14,7 @@
     loop_var: backuppc_client_item
   tags: backuppc_client
 
-- name: Add backuppc user to sudoers.d
+- name: Add backuppc user to sudoers.d    # noqa template-instead-of-copy
   ansible.builtin.copy:
     content: |
       {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
@@ -26,7 +26,7 @@
     loop_var: backuppc_client_item
   tags: backuppc_client
 
-- name: Add backuppc user MySQL dump to sudoers.d
+- name: Add backuppc user MySQL dump to sudoers.d   # noqa template-instead-of-copy
   ansible.builtin.copy:
     content: |
       {{ backuppc_client_item.username }} ALL=NOPASSWD:{{ mysql_dump_script }}
@@ -40,7 +40,7 @@
     - mysql_dump_script is defined
   tags: backuppc
 
-- name: Add backuppc user Postgres dump to sudoers.d
+- name: Add backuppc user Postgres dump to sudoers.d    # noqa template-instead-of-copy
   ansible.builtin.copy:
     content: |
       {{ backuppc_client_item.username }} ALL=NOPASSWD:{{ postgres_dump_script }}

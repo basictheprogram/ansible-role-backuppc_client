@@ -1,14 +1,14 @@
 ---
 dependency:
-  name: galaxy
+  name: Galaxy
 driver:
-  name: docker
+  name: Docker
 lint: |
   set -e
   yamllint .
   ansible-lint .
 platforms:
-  - name: backuppc-client-molecule-jammy-instance
+  - name: Backuppc-client-molecule-jammy-instance
     image: "geerlingguy/docker-ubuntu2204-ansible"
     tmpfs:
       - /run
@@ -18,7 +18,7 @@ platforms:
     privileged: true
     pre_build_image: true
 provisioner:
-  name: ansible
+  name: Ansible
   playbooks:
     prepare: prepare.yml
     converge: converge.yml
@@ -27,6 +27,6 @@ provisioner:
       backuppc-client-molecule-jammy-instance:
         tweak_motd: true
 verifier:
-  name: testinfra
+  name: Testinfra
   options:
     verbose: true
