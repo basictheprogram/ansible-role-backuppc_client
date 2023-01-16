@@ -1,6 +1,6 @@
 ---
-- name: Sudo backup
-  include_tasks: "{{ common_library }}/sudo-safety-backup.yml"
+- name: Sudoer backup
+  ansible.builtin.include_tasks: "{{ common_library }}/sudo-safety-backup.yml"
   tags: backuppc_client
 
 - name: Add backuppc user to sudoers
@@ -26,7 +26,7 @@
   tags: backuppc_client
 
 - name: Sudo restore
-  include_tasks: "{{ common_library }}/sudo-safety-restore.yml"
+  ansible.builtin.include_tasks: "{{ common_library }}/sudo-safety-restore.yml"
   tags: backuppc_client
 
 - name: Clean up temp file

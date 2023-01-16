@@ -23,7 +23,7 @@
   tags: backuppc_client
 
 - name: Import_tasks debian.yml
-  import_tasks: debian.yml
+  ansible.builtin.include_tasks: debian.yml
   when: ansible_os_family == 'Debian'
   tags: backuppc_client
 
@@ -35,8 +35,7 @@
     name: "{{ backuppc_client_item.username }}"
     state: "absent"
     remove: true
-  loop:
-    "{{ deprecated_backuppc_username }}"
+  loop: "{{ deprecated_backuppc_username }}"
   loop_control:
     loop_var: backuppc_client_item
   tags: backuppc_client
@@ -54,8 +53,7 @@
     password: "*"
     password_lock: true
     update_password: always
-  loop:
-    "{{ backuppc_client }}"
+  loop: "{{ backuppc_client }}"
   loop_control:
     loop_var: backuppc_client_item
   changed_when: false
@@ -75,14 +73,19 @@
 
 # TODO: task to remove old/deprecated autheorized_keys?
 
+- name: Debug common_library
+  ansible.builtin.debug:
+    msg: "common_library: {{ common_library }}"
+  tags: backuppc_client
+
 - name: Configure monolith /etc/sudoers file
-  import_tasks: monolithic_sudoers.yml
+  ansible.builtin.include_tasks: monolithic_sudoers.yml
   when:
     - ansible_lsb.major_release|int < 20
   tags: backuppc_client
 
 - name: Configure /etc/sudoers.d
-  import_tasks: sudoers_d.yml
+  ansible.builtin.include_tasks: sudoers_d.yml
   when:
     - ansible_lsb.major_release|int >= 20
   tags: backuppc_client

@@ -10,18 +10,18 @@
 # Configuration specific to Ubuntu (but not Debian)
 #
 - name: Check if ansible_distribution is Ubuntu
-  include_tasks: ubuntu.yml
+  ansible.builtin.import_tasks: ubuntu.yml
   when: ansible_distribution == 'Ubuntu'
   tags: backuppc
 
 - name: Dump mysql databases
-  include_tasks: mysql_dump.yml
+  ansible.builtin.include_tasks: mysql_dump.yml
   when:
     - mysql_dump_script is defined
   tags: backuppc
 
 - name: Dump postgres databases
-  include_tasks: postgres_dump.yml
+  ansible.builtin.include_tasks: postgres_dump.yml
   when:
     - postgres_dump_script is defined
   tags: backuppc
