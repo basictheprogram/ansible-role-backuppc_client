@@ -13,11 +13,11 @@
 - name: Configure monolith /etc/sudoers file
   ansible.builtin.include_tasks: monolithic_sudoers.yml
   when:
-    - ansible_lsb.major_release|int <= 6
+    - ansible_lsb.major_release|int < 6
   tags: backuppc_client
 
 - name: Configure /etc/sudoers.d
   ansible.builtin.include_tasks: sudoers_d.yml
   when:
-    - ansible_lsb.major_release|int > 6
+    - ansible_lsb.major_release|int >= 6
   tags: backuppc_client
