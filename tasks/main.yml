@@ -1,14 +1,4 @@
 ---
-- name: Release, distribution, family
-  ansible.builtin.debug:
-    msg: "{{ ansible_distribution_release }}:{{ ansible_distribution }}:{{ ansible_os_family }}"
-  tags: backuppc_client
-
-- name: Group_names
-  ansible.builtin.debug:
-    msg: "{{ group_names }}"
-  tags: backuppc_client
-
 - name: Gather OS specific variables
   ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
   vars:
@@ -22,9 +12,14 @@
         - "vars"
   tags: backuppc_client
 
-- name: Import_tasks debian.yml
+- name: Import tasks debian.yml
   ansible.builtin.include_tasks: debian.yml
   when: ansible_os_family == 'Debian'
+  tags: backuppc_client
+
+- name: Import tasks redhat.yml
+  ansible.builtin.include_tasks: redhat.yml
+  when: ansible_os_family == 'RedHat'
   tags: backuppc_client
 
 # Tasks after this comment (are hopefully) common to a linux bases operating
@@ -72,23 +67,6 @@
   tags: backuppc_client
 
 # TODO: task to remove old/deprecated autheorized_keys?
-
-- name: Debug common_library
-  ansible.builtin.debug:
-    msg: "common_library: {{ common_library }}"
-  tags: backuppc_client
-
-- name: Configure monolith /etc/sudoers file
-  ansible.builtin.include_tasks: monolithic_sudoers.yml
-  when:
-    - ansible_lsb.major_release|int < 20
-  tags: backuppc_client
-
-- name: Configure /etc/sudoers.d
-  ansible.builtin.include_tasks: sudoers_d.yml
-  when:
-    - ansible_lsb.major_release|int >= 20
-  tags: backuppc_client
 
 # Can override the location "{{ known_host_keys_dir }}"
 # default is in defaults/main.yml
