@@ -14,12 +14,12 @@
     loop_var: backuppc_client_item
   tags: backuppc_client
 
-- name: Add backuppc user to sudoers.d    # noqa template-instead-of-copy
+- name: Add backuppc user (rsync) to sudoers.d    # noqa template-instead-of-copy
   ansible.builtin.copy:
     content: |
       {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
 
-    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
+    dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_rsync"
     mode: "0440"
   loop: "{{ backuppc_client }}"
   loop_control:
@@ -53,3 +53,15 @@
   when:
     - postgres_dump_script is defined
   tags: backuppc
+
+# - name: Add backuppc user (sshuttle) to sudoers.d    # noqa template-instead-of-copy
+#   ansible.builtin.copy:
+#     content: |
+#       {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/sshuttle
+
+#     dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_sshuttle"
+#     mode: "0440"
+#   loop: "{{ backuppc_client }}"
+#   loop_control:
+#     loop_var: backuppc_client_item
+#   tags: backuppc_client

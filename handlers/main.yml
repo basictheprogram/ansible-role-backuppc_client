@@ -10,3 +10,10 @@
     name: sshd
     state: restarted
   tags: backuippc_client
+
+- name: Delete tempdir
+  ansible.builtin.file:
+    path: "{{ known_hosts.path }}"
+    state: absent
+  when: known_hosts.path is defined
+  tags: backuippc_client

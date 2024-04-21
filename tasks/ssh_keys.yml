@@ -1,0 +1,26 @@
+---
+- name: Set backuppc user authorized_keys
+  ansible.posix.authorized_key:
+    user: "{{ backuppc_client_item.0.username }}"
+    state: "present"
+    key_options: "{{ backuppc_client_item.0.key_options | default(omit) }}"
+    key: "{{ backuppc_client_item.1 }}"
+    manage_dir: true
+  loop: "{{ backuppc_client | subelements('authorized_keys') }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  tags: backuppc_client
+
+# TODO: task to remove old/deprecated autheorized_keys?
+# http://www.freekb.net/Article?id=2704
+
+- name: Remove ssh key(s) from backuppc user
+  ansible.posix.authorized_key:
+    # path: /var/lib/rsyncbackup/.ssh/authorized_keys
+    user: "{{ backuppc_client_item.0.username }}"
+    state: absent
+    key: "{{ backuppc_client_item.1 }}"
+  loop: "{{ backuppc_client | subelements('deprecated_keys') }}"
+  loop_control:
+    loop_var: backuppc_client_item
+  tags: backuppc_client

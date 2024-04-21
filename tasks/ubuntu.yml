@@ -3,7 +3,7 @@
   when:
     - ansible_lsb.major_release|int >= 20
   block:
-    - name: Configure openssh server (ubuntu 20.04+)
+    - name: Ubuntu (>= 20) configure openssh server (ubuntu 20.04+)
       ansible.builtin.copy:
         src: files/etc/ssh/sshd_config.d/
         dest: /etc/ssh/sshd_config.d
@@ -15,12 +15,16 @@
         - Reload sshd
       tags: backuppc_client
 
+    - name: Ubuntu (>= 20) configure /etc/sudoers.d
+      ansible.builtin.include_tasks: sudoers_d.yml
+      tags: backuppc_client
+
 - name: Ubuntu major_release >= 16 and major_release < 20
   when:
     - ansible_lsb.major_release|int >= 16
     - ansible_lsb.major_release|int < 20
   block:
-    - name: Accept ssh-dss key types
+    - name: Ubuntu (>=16 and < 20) accept ssh-dss key types
       ansible.builtin.lineinfile:
         dest: /etc/ssh/sshd_config
         state: present
@@ -31,32 +35,11 @@
         - Reload sshd
       tags: backuppc_client
 
-- name: Ubuntu major_release < 16 or major_release >= 20
-  when:
-    - ansible_lsb.major_release|int < 16 or ansible_lsb.major_release|int >= 20
-  block:
-    # - name: UBUNTU remove ssh-dss key types
-    #   ansible.builtin.lineinfile:
-    #     dest: /etc/ssh/sshd_config
-    #     state: absent
-    #     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-    #     validate: "sshd -T -f %s"
-    #   notify:
-    #     - Reload sshd
-    #   tags: backuppc_client
-
-    - name: Accept ssh-dss key types
-      ansible.builtin.lineinfile:
-        dest: /etc/ssh/sshd_config
-        state: present
-        regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-        line: "PubkeyAcceptedKeyTypes +ssh-dss"
-        validate: "sshd -T -f %s"
-      notify:
-        - Reload sshd
+    - name: Ubuntu (>=16 and < 20) configure monolith /etc/sudoers file
+      ansible.builtin.include_tasks: monolithic_sudoers.yml
       tags: backuppc_client
 
-- name: Unsupported release
+- name: Uubntu unsupported release
   ansible.builtin.debug:
     msg: "Ubuntu {{ ansible_distribution_release }} is not supported"
   when:

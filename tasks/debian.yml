@@ -1,47 +1,54 @@
 ---
-- name: Install backuppc client packages (apt)
+- name: Debian install backuppc client packages (apt)
   ansible.builtin.apt:
     name: "{{ backuppc_client_packages }}"
     state: "present"
     install_recommends: false
     force_apt_get: true
-  tags: backuppc
+  tags: backuppc_client
 
-# Configuration specific to Ubuntu (but not Debian)
-#
-- name: Check if ansible_distribution is Ubuntu
-  ansible.builtin.import_tasks: ubuntu.yml
-  when: ansible_distribution == 'Ubuntu'
-  tags: backuppc
-
-- name: Dump mysql databases
+- name: Debian dump mysql databases
   ansible.builtin.include_tasks: mysql_dump.yml
   when:
     - mysql_dump_script is defined
-  tags: backuppc
+  tags: backuppc_client
 
-- name: Dump postgres databases
+- name: Debian dump postgres databases
   ansible.builtin.include_tasks: postgres_dump.yml
   when:
     - postgres_dump_script is defined
-  tags: backuppc
-
-- name: Debug common_library
-  ansible.builtin.debug:
-    msg: "common_library: {{ common_library }}"
   tags: backuppc_client
 
-- name: Configure monolith /etc/sudoers file
-  ansible.builtin.include_tasks: monolithic_sudoers.yml
+# - name: Debug common_library
+#   ansible.builtin.debug:
+#     msg: "common_library: {{ common_library }}"
+#   tags: backuppc_client
+
+- name: Debian major_release >= 10
   when:
-    - ansible_lsb.major_release|int < 20
+    - ansible_lsb.major_release|int >= 10
+    - ansible_distribution == "Debian"
+  block:
+    - name: Debian (>=10) configure /etc/sudoers.d
+      ansible.builtin.include_tasks: sudoers_d.yml
   tags: backuppc_client
 
-- name: Configure /etc/sudoers.d
-  ansible.builtin.include_tasks: sudoers_d.yml
-  when:
-    - ansible_lsb.major_release|int >= 20
-  tags: backuppc_client
+# - name: Debian major_release >= 16 and major_release < 20
+#   when:
+#     - ansible_lsb.major_release|int >= 16
+#     - ansible_lsb.major_release|int < 20
+#   block:
+#     - name: Debian (xxx) configure monolith /etc/sudoers file
+#       ansible.builtin.include_tasks: monolithic_sudoers.yml
+#       when:
+#         - ansible_lsb.major_release|int < 20
+#       tags: backuppc_client
+
+# - name: Debian unsupported release
+#   ansible.builtin.debug:
+#     msg: "Ubuntu {{ ansible_distribution_release }} is not supported"
+#   when:
+#     - ansible_lsb.major_release|int < 16
 
 # Leave this task, I'm guessing we will need it when the backuppc
 # server has an OS dist-upgrade

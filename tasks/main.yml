@@ -1,4 +1,9 @@
 ---
+- name: Release, distribution, family
+  ansible.builtin.debug:
+    msg: "distribution_release:{{ ansible_distribution_release }} distribution:{{ ansible_distribution }} os_family:{{ ansible_os_family }} release:{{ ansible_lsb.major_release }}"
+  tags: backuppc_client
+
 - name: Gather OS specific variables
   ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
   vars:
@@ -15,6 +20,11 @@
 - name: Import tasks debian.yml
   ansible.builtin.include_tasks: debian.yml
   when: ansible_os_family == 'Debian'
+  tags: backuppc_client
+
+- name: Import tasks ubuntu.yml
+  ansible.builtin.import_tasks: ubuntu.yml
+  when: ansible_distribution == 'Ubuntu'
   tags: backuppc_client
 
 - name: Import tasks redhat.yml
@@ -52,13 +62,14 @@
   loop_control:
     loop_var: backuppc_client_item
   changed_when: false
+  notify: known_hosts
   tags: backuppc_client
 
 - name: Set up backuppc user authorized_keys
   ansible.posix.authorized_key:
     user: "{{ backuppc_client_item.0.username }}"
     state: "present"
-    key_options: "{{ backuppc_client_item.0.key_options }}"
+    key_options: "{{ backuppc_client_item.0.key_options | default(omit) }}"
     key: "{{ backuppc_client_item.1 }}"
     manage_dir: true
   loop: "{{ backuppc_client | subelements('authorized_keys') }}"
@@ -66,7 +77,8 @@
     loop_var: backuppc_client_item
   tags: backuppc_client
 
-# TODO: task to remove old/deprecated autheorized_keys?
+# TODO: add hosts ssh key(s) to known_hosts file
+# TODO: confirm host has a .pl file on the backuppc server
 
 # Can override the location "{{ known_host_keys_dir }}"
 # default is in defaults/main.yml
@@ -106,3 +118,12 @@
 #  changed_when:
 #    - item.changed
 #  tags: backuppc_client
+
+- name: Include tasks ssh_keys.yml
+  ansible.builtin.include_tasks: ssh_keys.yml
+  tags: backuppc_client
+
+- name: Include tasks known_hosts.yml
+  ansible.builtin.include_tasks: known_hosts.yml
+  when: backuppc_ssh_key_scan is defined
+  tags: backuppc_client
