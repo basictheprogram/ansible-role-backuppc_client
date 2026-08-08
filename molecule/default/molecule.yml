@@ -3,13 +3,45 @@ dependency:
   name: Galaxy
 driver:
   name: Docker
-lint: |
-  set -e
-  yamllint .
-  ansible-lint .
 platforms:
-  - name: Backuppc-client-molecule-jammy-instance
-    image: "geerlingguy/docker-ubuntu2204-ansible"
+  - name: backuppc-client-molecule-jammy-instance
+    image: "geerlingguy/docker-ubuntu2204-ansible:latest"
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    pre_build_image: true
+  - name: backuppc-client-molecule-bookworm-instance
+    image: "geerlingguy/docker-debian12-ansible:latest"
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    pre_build_image: true
+  - name: backuppc-client-molecule-trixie-instance
+    image: "geerlingguy/docker-debian13-ansible:latest"
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    pre_build_image: true
+  - name: backuppc-client-molecule-rockylinux8-instance
+    image: "geerlingguy/docker-rockylinux8-ansible:latest"
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    pre_build_image: true
+  - name: backuppc-client-molecule-rockylinux9-instance
+    image: "geerlingguy/docker-rockylinux9-ansible:latest"
     tmpfs:
       - /run
       - /tmp
@@ -22,11 +54,9 @@ provisioner:
   playbooks:
     prepare: prepare.yml
     converge: converge.yml
-  inventory:
-    host_vars:
-      backuppc-client-molecule-jammy-instance:
-        tweak_motd: true
 verifier:
-  name: Testinfra
+  name: testinfra
+  directory: tests/
   options:
-    verbose: true
+    v: true
+    p: "no:cacheprovider"

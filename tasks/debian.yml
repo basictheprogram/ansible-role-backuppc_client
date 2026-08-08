@@ -33,17 +33,6 @@
     - name: Debian (>=10) configure /etc/sudoers.d
       ansible.builtin.include_tasks: sudoers_d.yml
 
-# - name: Debian major_release >= 16 and major_release < 20
-#   when:
-#     - ansible_lsb.major_release|int >= 16
-#     - ansible_lsb.major_release|int < 20
-#   block:
-#     - name: Debian (xxx) configure monolith /etc/sudoers file
-#       ansible.builtin.include_tasks: monolithic_sudoers.yml
-#       when:
-#         - ansible_lsb.major_release|int < 20
-#       tags: backuppc_client
-
 # - name: Debian unsupported release
 #   ansible.builtin.debug:
 #     msg: "Ubuntu {{ ansible_distribution_release }} is not supported"

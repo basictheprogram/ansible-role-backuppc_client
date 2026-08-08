@@ -1,0 +1,51 @@
+---
+- name: Preflight - assert minimum Ansible version
+  ansible.builtin.assert:
+    that:
+      - ansible_version.full is version('2.20', '>=')
+    fail_msg: >-
+      backuppc_client requires ansible-core >= 2.20
+      (found {{ ansible_version.full }}).
+    quiet: true
+
+- name: Preflight - assert supported OS family
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] in ['Debian', 'RedHat']
+    fail_msg: >-
+      backuppc_client does not support os_family
+      '{{ ansible_facts['os_family'] }}'
+      ({{ ansible_facts['distribution'] }}
+      {{ ansible_facts['distribution_version'] }}). Supported families:
+      Debian, RedHat.
+    quiet: true
+
+- name: Preflight - assert deprecated_backuppc_username is defined
+  ansible.builtin.assert:
+    that:
+      - deprecated_backuppc_username is defined
+      - deprecated_backuppc_username is iterable
+    fail_msg: >-
+      backuppc_client requires deprecated_backuppc_username to be defined
+      (as a list, even an empty one) - tasks/main.yml and sudoers_d.yml
+      both loop over it unconditionally to remove old backuppc users.
+    quiet: true
+
+- name: Preflight - assert backuppc_client entries are well-formed
+  ansible.builtin.assert:
+    that:
+      - backuppc_client_item.username is defined
+      - backuppc_client_item.username | length > 0
+      - backuppc_client_item.home is defined
+      - backuppc_client_item.home | length > 0
+      - backuppc_client_item.shell is defined
+      - backuppc_client_item.shell | length > 0
+    fail_msg: >-
+      Each backuppc_client entry needs username, home, and shell set -
+      tasks/main.yml's "Create backuppc user" task depends on all three.
+    quiet: true
+  loop: "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
+    label: "{{ backuppc_client_item.username | default('(unnamed)') }}"
+  when: backuppc_client is defined

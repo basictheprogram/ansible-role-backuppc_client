@@ -35,10 +35,6 @@
         - Reload sshd
       tags: backuppc_client
 
-    - name: Ubuntu (>=16 and < 20) configure monolith /etc/sudoers file
-      ansible.builtin.include_tasks: monolithic_sudoers.yml
-      tags: backuppc_client
-
 - name: Uubntu unsupported release
   ansible.builtin.debug:
     msg: "Ubuntu {{ ansible_distribution_release }} is not supported"

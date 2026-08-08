@@ -4,20 +4,25 @@
   become: true
 
   vars:
-    prepare_packages:
+    prepare_packages_debian:
       - dialog
       - less
       - openssh-server    # needed for testing backuppc ssh keys
       - vim-tiny
+    prepare_packages_redhat:
+      - dialog
+      - less
+      - openssh-server    # needed for testing backuppc ssh keys
+      - vim-minimal
 
   environment:
     TZ: "America/Chicago"    # Keep tzdata pacakge happy
     DEBIAN_FRONTEND: "noninteractive"
 
   tasks:
-    - name: PREPARE install packages
+    - name: PREPARE install packages (Debian)
       ansible.builtin.apt:
-        name: "{{ prepare_packages }}"
+        name: "{{ prepare_packages_debian }}"
         state: present
         update_cache: true
         cache_valid_time: 3600
@@ -26,7 +31,21 @@
         autoremove: true
         autoclean: true
       changed_when: false
-      when: ansible_os_family == 'Debian'
+      when: ansible_facts.os_family == 'Debian'
 
-    - name: Restart sshd    # noqa no-changed-when
+    - name: PREPARE install packages (RedHat)
+      ansible.builtin.dnf:
+        name: "{{ prepare_packages_redhat }}"
+        state: present
+      changed_when: false
+      when: ansible_facts.os_family == 'RedHat'
+
+    - name: Restart sshd (Debian)    # noqa no-changed-when
       ansible.builtin.command: /etc/init.d/ssh restart
+      when: ansible_facts.os_family == 'Debian'
+
+    - name: Restart sshd (RedHat)
+      ansible.builtin.systemd_service:
+        name: sshd
+        state: restarted
+      when: ansible_facts.os_family == 'RedHat'

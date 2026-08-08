@@ -10,12 +10,28 @@
         home: '/var/lib/rsyncbackup'
         shell: '/bin/bash'
         comment: 'BackupPC User'
-        authorized_keys: []
+        authorized_keys:
+          - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOUGIZtlsKNcAGaU4n/peqnAfXNsiV5NQJx3+WR4i4A/ molecule-test-key"
+        deprecated_keys: []
         key_options: ''
 
   environment:
     TZ: "America/Chicago"   # Keep tzdata pacakge happy
     DEBIAN_FRONTEND: "noninteractive"
+
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+        force_apt_get: true
+      changed_when: false
+      when: ansible_facts.os_family == 'Debian'
+    - name: Update dnf cache
+      ansible.builtin.dnf:
+        update_cache: true
+      changed_when: false
+      when: ansible_facts.os_family == 'RedHat'
 
   tasks:
     - name: Include_role backuppc_client

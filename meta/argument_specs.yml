@@ -1,0 +1,127 @@
+---
+argument_specs:
+  main:
+    short_description: Configure a BackupPC client
+    description:
+      - Creates the backup user, manages SSH C(authorized_keys) for the
+        rsync-over-ssh backup transport, and configures C(sudoers.d)
+        rules for rsync (and, optionally, MySQL/Postgres dump scripts).
+    options:
+      known_host_keys_dir:
+        type: str
+        required: false
+        default: "{{ playbook_dir }}"
+        description:
+          - Directory fetched SSH host public keys are written to.
+      ssh_host_pub_keys:
+        type: list
+        elements: str
+        required: false
+        default:
+          - ssh_host_dsa_key.pub
+          - ssh_host_rsa_key.pub
+          - ssh_host_ecdsa_key.pub
+          - ssh_host_ed25519_key.pub
+        description:
+          - Filenames under C(/etc/ssh/) to consider when populating
+            known_hosts.
+      backuppc_client:
+        type: list
+        elements: dict
+        required: false
+        description:
+          - One entry per backup user to create on this host. Drives
+            user creation, C(authorized_keys) management, and the rsync
+            C(sudoers.d) rule.
+        options:
+          username:
+            type: str
+            required: true
+            description: Name of the backup user to create.
+          home:
+            type: str
+            required: true
+            description: Home directory for the backup user.
+          shell:
+            type: str
+            required: true
+            description: Login shell for the backup user.
+          comment:
+            type: str
+            required: false
+            description: GECOS comment for the backup user.
+          authorized_keys:
+            type: list
+            elements: str
+            required: false
+            description:
+              - SSH public key(s) to install in this user's
+                C(authorized_keys).
+          key_options:
+            type: str
+            required: false
+            description:
+              - C(authorized_keys) key options (e.g. a forced
+                C(command=) restricting the key to the rsync
+                transport).
+          deprecated_keys:
+            type: list
+            elements: str
+            required: true
+            description:
+              - SSH public key(s) to remove from this user's
+                C(authorized_keys). Required (pass C([]) if there is
+                nothing to remove) - C(tasks/ssh_keys.yml) loops over
+                this key with the C(subelements) filter, which errors
+                if the key is missing entirely rather than just empty.
+      deprecated_backuppc_username:
+        type: list
+        elements: str
+        required: true
+        description:
+          - Usernames of old backup users to remove. Required (pass
+            C([]) if there is nothing to remove) - C(tasks/main.yml) and
+            C(tasks/sudoers_d.yml) both loop over this variable
+            unconditionally.
+      mysql_dump_script:
+        type: str
+        required: false
+        description:
+          - Path to install the MySQL dump script at. When set, enables
+            MySQL dump support (package install, sudoers.d rule, script
+            deployment).
+      postgres_dump_script:
+        type: str
+        required: false
+        description:
+          - Path to install the Postgres dump script at. When set,
+            enables Postgres dump support (sudoers.d rule, script
+            deployment).
+      postgres_dump_file:
+        type: str
+        required: false
+        description:
+          - Source file under C(files/) to copy to
+            I(postgres_dump_script).
+      backuppc_ssh_key_scan:
+        type: bool
+        required: false
+        description:
+          - When defined (value is not otherwise used), runs
+            C(tasks/known_hosts.yml) to C(ssh-keyscan) this host into
+            the BackupPC server's known_hosts.
+      backuppc_client_mysql_dump:
+        type: list
+        elements: dict
+        required: false
+        description:
+          - Same shape as I(backuppc_client); grants MySQL-dump-specific
+            C(authorized_keys) via C(tasks/mysql_dump.yml).
+      backuppc_client_postgres_dump:
+        type: list
+        elements: dict
+        required: false
+        description:
+          - Same shape as I(backuppc_client); grants
+            Postgres-dump-specific C(authorized_keys) via
+            C(tasks/postgres_dump.yml).

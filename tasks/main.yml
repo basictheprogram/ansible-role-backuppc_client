@@ -1,4 +1,8 @@
 ---
+- name: Run preflight assertions
+  ansible.builtin.include_tasks: preflight.yml
+  tags: always
+
 - name: Release, distribution, family
   ansible.builtin.debug:
     msg: "distribution_release:{{ ansible_distribution_release }} distribution:{{ ansible_distribution }} os_family:{{ ansible_os_family }} release:{{ ansible_lsb.major_release }}"
@@ -47,7 +51,7 @@
 
 # Look in group_vars and host_vars for default value for {{ backuppc_client }}
 #
-- name: Create backuppc user    # noqa no-log-password
+- name: Create backuppc user
   ansible.builtin.user:
     name: "{{ backuppc_client_item.username }}"
     shell: "{{ backuppc_client_item.shell }}"
@@ -61,6 +65,7 @@
   loop: "{{ backuppc_client }}"
   loop_control:
     loop_var: backuppc_client_item
+  no_log: true
   changed_when: false
   when:
     - backuppc_client is defined
