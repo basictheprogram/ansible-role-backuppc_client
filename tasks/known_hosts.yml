@@ -16,7 +16,6 @@
     msg: "{{ inventory_hostname }}::{{ ansible_ssh_host }}"
   tags: backuppc_client
 
-
 # Error? Is the ansible user ssh key loaded?
 #
 - name: Run ssh-keyscan (IP addresses)
@@ -42,7 +41,6 @@
 #     state: absent
 #   throttle: 1
 #   tags: backuppc_client
-
 
 - name: Set permissions
   ansible.builtin.file:

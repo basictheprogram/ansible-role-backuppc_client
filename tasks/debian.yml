@@ -28,10 +28,10 @@
   when:
     - ansible_lsb.major_release|int >= 10
     - ansible_distribution == "Debian"
+  tags: backuppc_client
   block:
     - name: Debian (>=10) configure /etc/sudoers.d
       ansible.builtin.include_tasks: sudoers_d.yml
-  tags: backuppc_client
 
 # - name: Debian major_release >= 16 and major_release < 20
 #   when:

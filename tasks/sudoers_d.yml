@@ -24,6 +24,8 @@
   loop: "{{ backuppc_client }}"
   loop_control:
     loop_var: backuppc_client_item
+  when:
+    - backuppc_client is defined
   tags: backuppc_client
 
 - name: Add backuppc user MySQL dump to sudoers.d   # noqa template-instead-of-copy

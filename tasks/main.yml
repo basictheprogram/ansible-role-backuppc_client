@@ -62,20 +62,34 @@
   loop_control:
     loop_var: backuppc_client_item
   changed_when: false
+  when:
+    - backuppc_client is defined
   notify: known_hosts
   tags: backuppc_client
 
-- name: Set up backuppc user authorized_keys
-  ansible.posix.authorized_key:
-    user: "{{ backuppc_client_item.0.username }}"
-    state: "present"
-    key_options: "{{ backuppc_client_item.0.key_options | default(omit) }}"
-    key: "{{ backuppc_client_item.1 }}"
-    manage_dir: true
-  loop: "{{ backuppc_client | subelements('authorized_keys') }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  tags: backuppc_client
+# - name: Debug backuppc_client structure
+#   debug:
+#     var: backuppc_client
+
+# - name: Set up backuppc user authorized_keys (only if backuppc_client is defined)
+#   when:
+#     - backuppc_client is defined
+#     - backuppc_client | length > 0
+#   block:
+#     - name: Set up backuppc user authorized_keys
+#       ansible.posix.authorized_key:
+#         user: "{{ backuppc_client_item.0.username }}"
+#         state: "present"
+#         # key_options: "{{ backuppc_client_item.0.key_options | default(omit) }}"
+#         key_options: "{{ backuppc_client_item.key_options | default(omit) }}"
+#         # key: "{{ backuppc_client_item.1 }}"
+#         key: "{{ backuppc_client_item.authorized_keys }}"
+#         manage_dir: true
+#       # loop: "{{ backuppc_client | subelements('authorized_keys') }}"
+#       loop: "{{ backuppc_client }}"
+#       loop_control:
+#         loop_var: backuppc_client_item
+#   tags: backuppc_client
 
 # TODO: add hosts ssh key(s) to known_hosts file
 # TODO: confirm host has a .pl file on the backuppc server
