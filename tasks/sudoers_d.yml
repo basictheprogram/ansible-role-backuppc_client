@@ -6,7 +6,7 @@
 
 - name: Delete old backuppc user from sudoers.d
   ansible.builtin.file:
-    path: "/etc/sudoers.d/{{ backuppc_client_item }}"
+    path: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
     state: absent
   loop:
     "{{ deprecated_backuppc_username }}"
@@ -18,14 +18,14 @@
   ansible.builtin.copy:
     content: |
       {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/rsync
+      Defaults:{{ backuppc_client_item.username }} !use_pty
 
     dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_rsync"
     mode: "0440"
+    validate: "visudo -cf %s"
   loop: "{{ backuppc_client }}"
   loop_control:
     loop_var: backuppc_client_item
-  when:
-    - backuppc_client is defined
   tags: backuppc_client
 
 - name: Add backuppc user MySQL dump to sudoers.d   # noqa template-instead-of-copy

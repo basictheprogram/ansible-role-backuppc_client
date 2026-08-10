@@ -31,6 +31,34 @@
       both loop over it unconditionally to remove old backuppc users.
     quiet: true
 
+- name: Preflight - assert deprecated_backuppc_username entries are well-formed
+  ansible.builtin.assert:
+    that:
+      - backuppc_client_deprecated_item.username is defined
+      - backuppc_client_deprecated_item.username | length > 0
+    fail_msg: >-
+      Each deprecated_backuppc_username entry needs username set -
+      tasks/main.yml's "Delete old backuppc users" and
+      tasks/sudoers_d.yml's "Delete old backuppc user from sudoers.d"
+      both depend on it.
+    quiet: true
+  loop: "{{ deprecated_backuppc_username }}"
+  loop_control:
+    loop_var: backuppc_client_deprecated_item
+    label: "{{ backuppc_client_deprecated_item.username | default('(unnamed)') }}"
+
+- name: Preflight - assert backuppc_client is defined
+  ansible.builtin.assert:
+    that:
+      - backuppc_client is defined
+      - backuppc_client is iterable
+    fail_msg: >-
+      backuppc_client requires backuppc_client to be defined (as a
+      list, even an empty one) - tasks/main.yml, tasks/ssh_keys.yml,
+      and tasks/sudoers_d.yml all consume it without guarding on
+      definedness.
+    quiet: true
+
 - name: Preflight - assert backuppc_client entries are well-formed
   ansible.builtin.assert:
     that:
@@ -48,4 +76,53 @@
   loop_control:
     loop_var: backuppc_client_item
     label: "{{ backuppc_client_item.username | default('(unnamed)') }}"
-  when: backuppc_client is defined
+
+- name: Preflight - assert no DSA (ssh-dss) authorized_keys
+  ansible.builtin.assert:
+    that:
+      - (lookup('vars', backuppc_client_authkey_var, default=[])
+        | selectattr('authorized_keys', 'defined')
+        | map(attribute='authorized_keys') | flatten
+        | select('match', '^ssh-dss ') | list | length) == 0
+    fail_msg: >-
+      One or more {{ backuppc_client_authkey_var }}[].authorized_keys
+      entries use a DSA (ssh-dss) key, which this role no longer
+      accepts - PubkeyAcceptedKeyTypes on Ubuntu 20.04+ hosts managed
+      by this role already excludes ssh-dss, and DSA is long-deprecated
+      in OpenSSH generally. Replace with an ed25519 (or RSA) key.
+    quiet: true
+  loop:
+    - backuppc_client
+    - backuppc_client_mysql_dump
+    - backuppc_client_postgres_dump
+  loop_control:
+    loop_var: backuppc_client_authkey_var
+
+- name: Preflight - query ssh pubkey types this host's sshd supports
+  ansible.builtin.command: ssh -Q PubkeyAcceptedKeyTypes
+  register: backuppc_client_supported_pubkey_types
+  changed_when: false
+  check_mode: false
+  when:
+    - ansible_facts['distribution'] == 'Ubuntu'
+    - ansible_facts['lsb']['major_release'] | int >= 20
+
+- name: Preflight - assert backuppc_client_ssh_pubkey_accepted_types is supported
+  ansible.builtin.assert:
+    that:
+      - (backuppc_client_ssh_pubkey_accepted_types | regex_replace('^[+^-]', '')).split(',')
+        | difference(backuppc_client_supported_pubkey_types.stdout_lines) | length == 0
+    fail_msg: >-
+      backuppc_client_ssh_pubkey_accepted_types (currently
+      '{{ backuppc_client_ssh_pubkey_accepted_types }}', from role
+      defaults or a group_vars/host_vars override) requests SSH key
+      type(s) not recognized by this host's ssh: {{
+      ((backuppc_client_ssh_pubkey_accepted_types | regex_replace('^[+^-]', '')).split(',')
+      | difference(backuppc_client_supported_pubkey_types.stdout_lines))
+      | join(', ') }}. Check group_vars/host_vars for this variable, or
+      run "ssh -Q PubkeyAcceptedKeyTypes" on the target host to see
+      what its OpenSSH build actually supports.
+    quiet: true
+  when:
+    - ansible_facts['distribution'] == 'Ubuntu'
+    - ansible_facts['lsb']['major_release'] | int >= 20

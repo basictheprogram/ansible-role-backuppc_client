@@ -1,14 +1,27 @@
 ---
+- name: Deploy rsyncbackup-wrapper.sh forced-command script
+  ansible.builtin.copy:
+    src: usr/local/bin/rsyncbackup-wrapper.sh
+    dest: "{{ backuppc_client_wrapper_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+  when: backuppc_client | length > 0
+  tags: backuppc_client
+
 - name: Set backuppc user authorized_keys (in (ssh_keys.yml))
   ansible.posix.authorized_key:
     user: "{{ backuppc_client_item.0.username }}"
     state: "present"
-    key_options: "{{ backuppc_client_item.0.key_options | default(omit) }}"
+    key_options: "{{ backuppc_client_item.0.key_options | default(backuppc_client_rsync_key_options) }}"
     key: "{{ backuppc_client_item.1 }}"
     manage_dir: true
   loop: "{{ backuppc_client | subelements('authorized_keys') }}"
   loop_control:
     loop_var: backuppc_client_item
+  vars:
+    backuppc_client_rsync_key_options: >-
+      command="{{ backuppc_client_wrapper_path }}",no-port-forwarding,no-X11-forwarding,no-agent-forwarding
   tags: backuppc_client
 
 # - name: Debug each entry in backuppc_client
@@ -65,3 +78,50 @@
 #       loop_control:
 #         loop_var: backuppc_client_item
 #   tags: backuppc_client
+
+- name: Verify - rsyncbackup-wrapper.sh is root-owned and executable
+  ansible.builtin.stat:
+    path: "{{ backuppc_client_wrapper_path }}"
+  register: backuppc_client_wrapper_stat
+  when: backuppc_client | length > 0
+  tags: backuppc_client
+
+- name: Verify - assert wrapper script mode/ownership
+  ansible.builtin.assert:
+    that:
+      - backuppc_client_wrapper_stat.stat.exists
+      - backuppc_client_wrapper_stat.stat.pw_name == 'root'
+      - backuppc_client_wrapper_stat.stat.executable
+    fail_msg: >-
+      {{ backuppc_client_wrapper_path }} is missing, not root-owned, or
+      not executable - the backuppc_client authorized_keys command=
+      restriction depends on it.
+    quiet: true
+  when: backuppc_client | length > 0
+  tags: backuppc_client
+
+- name: Verify - sudo -l for each backuppc user
+  ansible.builtin.command: "sudo -l -U {{ backuppc_client_item.username }}"
+  register: backuppc_client_sudo_l
+  changed_when: false
+  check_mode: false
+  loop: "{{ backuppc_client }}"
+  loop_control:
+    loop_var: backuppc_client_item
+    label: "{{ backuppc_client_item.username }}"
+  tags: backuppc_client
+
+- name: Verify - assert NOPASSWD rsync sudoers rule is active
+  ansible.builtin.assert:
+    that:
+      - "'NOPASSWD: /usr/bin/rsync' in backuppc_client_sudo_l_item.stdout"
+    fail_msg: >-
+      sudo -l -U {{ backuppc_client_sudo_l_item.backuppc_client_item.username }}
+      does not show the expected NOPASSWD /usr/bin/rsync rule - check
+      /etc/sudoers.d/{{ backuppc_client_sudo_l_item.backuppc_client_item.username }}_rsync.
+    quiet: true
+  loop: "{{ backuppc_client_sudo_l.results }}"
+  loop_control:
+    loop_var: backuppc_client_sudo_l_item
+    label: "{{ backuppc_client_sudo_l_item.backuppc_client_item.username }}"
+  tags: backuppc_client

@@ -5,7 +5,7 @@
 
 - name: Release, distribution, family
   ansible.builtin.debug:
-    msg: "distribution_release:{{ ansible_distribution_release }} distribution:{{ ansible_distribution }} os_family:{{ ansible_os_family }} release:{{ ansible_lsb.major_release }}"
+    msg: "distribution_release:{{ ansible_facts['distribution_release'] }} distribution:{{ ansible_facts['distribution'] }} os_family:{{ ansible_facts['os_family'] }} release:{{ ansible_facts['lsb']['major_release'] }}"
   tags: backuppc_client
 
 - name: Gather OS specific variables
@@ -13,9 +13,9 @@
   vars:
     params:
       files:
-        - "{{ ansible_distribution_release }}.yml"
-        - "{{ ansible_distribution }}.yml"
-        - "{{ ansible_os_family }}.yml"
+        - "{{ ansible_facts['distribution_release'] }}.yml"
+        - "{{ ansible_facts['distribution'] }}.yml"
+        - "{{ ansible_facts['os_family'] }}.yml"
         - "default.yml"
       paths:
         - "vars"
@@ -23,17 +23,17 @@
 
 - name: Import tasks debian.yml
   ansible.builtin.include_tasks: debian.yml
-  when: ansible_os_family == 'Debian'
+  when: ansible_facts['os_family'] == 'Debian'
   tags: backuppc_client
 
 - name: Import tasks ubuntu.yml
   ansible.builtin.import_tasks: ubuntu.yml
-  when: ansible_distribution == 'Ubuntu'
+  when: ansible_facts['distribution'] == 'Ubuntu'
   tags: backuppc_client
 
 - name: Import tasks redhat.yml
   ansible.builtin.include_tasks: redhat.yml
-  when: ansible_os_family == 'RedHat'
+  when: ansible_facts['os_family'] == 'RedHat'
   tags: backuppc_client
 
 # Tasks after this comment (are hopefully) common to a linux bases operating
@@ -67,8 +67,6 @@
     loop_var: backuppc_client_item
   no_log: true
   changed_when: false
-  when:
-    - backuppc_client is defined
   notify: known_hosts
   tags: backuppc_client
 

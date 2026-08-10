@@ -1,12 +1,12 @@
 ---
 - name: Ubuntu major_release >= 20
   when:
-    - ansible_lsb.major_release|int >= 20
+    - ansible_facts['lsb']['major_release'] | int >= 20
   block:
     - name: Ubuntu (>= 20) configure openssh server (ubuntu 20.04+)
-      ansible.builtin.copy:
-        src: files/etc/ssh/sshd_config.d/
-        dest: /etc/ssh/sshd_config.d
+      ansible.builtin.template:
+        src: etc/ssh/sshd_config.d/PubkeyAcceptedKeyTypes.conf.j2
+        dest: /etc/ssh/sshd_config.d/PubkeyAcceptedKeyTypes.conf
         owner: root
         group: root
         mode: "0400"
@@ -19,24 +19,8 @@
       ansible.builtin.include_tasks: sudoers_d.yml
       tags: backuppc_client
 
-- name: Ubuntu major_release >= 16 and major_release < 20
-  when:
-    - ansible_lsb.major_release|int >= 16
-    - ansible_lsb.major_release|int < 20
-  block:
-    - name: Ubuntu (>=16 and < 20) accept ssh-dss key types
-      ansible.builtin.lineinfile:
-        dest: /etc/ssh/sshd_config
-        state: present
-        regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-        line: "PubkeyAcceptedKeyTypes +ssh-dss"
-        validate: "sshd -T -f %s"
-      notify:
-        - Reload sshd
-      tags: backuppc_client
-
 - name: Uubntu unsupported release
   ansible.builtin.debug:
-    msg: "Ubuntu {{ ansible_distribution_release }} is not supported"
+    msg: "Ubuntu {{ ansible_facts['distribution_release'] }} is not supported"
   when:
-    - ansible_lsb.major_release|int < 16
+    - ansible_facts['lsb']['major_release'] | int < 20

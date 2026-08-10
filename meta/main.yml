@@ -13,7 +13,7 @@ galaxy_info:
   company: Real Time Enterprises, Inc.
   license: MIT
   min_ansible_version: "2.20"
-  issue_tracker_url: https://gitlab.real-time.com/ansible-roles/backuppc_client/-/issues
+  issue_tracker_url: https://github.com/basictheprogram/ansible-role-backuppc_client/issues
   galaxy_tags:
     - debian
     - ubuntu

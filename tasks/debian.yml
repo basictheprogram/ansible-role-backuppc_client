@@ -26,8 +26,8 @@
 
 - name: Debian major_release >= 10
   when:
-    - ansible_lsb.major_release|int >= 10
-    - ansible_distribution == "Debian"
+    - ansible_facts['lsb']['major_release'] | int >= 10
+    - ansible_facts['distribution'] == "Debian"
   tags: backuppc_client
   block:
     - name: Debian (>=10) configure /etc/sudoers.d
@@ -38,19 +38,3 @@
 #     msg: "Ubuntu {{ ansible_distribution_release }} is not supported"
 #   when:
 #     - ansible_lsb.major_release|int < 16
-
-# Leave this task, I'm guessing we will need it when the backuppc
-# server has an OS dist-upgrade
-#
-# - name: Remove ssh-dss key types
-#   lineinfile:
-#     dest: /etc/ssh/sshd_config
-#     state: absent
-#     regexp: "^PubkeyAcceptedKeyTypes(.*)$"
-#     validate: "sshd -T -f %s"
-#   when:
-#     - ansible_distribution != 'Ubuntu'
-#     - ansible_lsb.major_release|int >= 10
-#   notify:
-#     - Reload sshd
-#   tags: backuppc

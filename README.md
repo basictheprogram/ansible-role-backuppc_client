@@ -26,6 +26,8 @@ scripts) so the BackupPC server can pull backups without a password.
 |-------------------------|-------------------------|----------------------------------------------------------------------|
 | `known_host_keys_dir`   | `{{ playbook_dir }}`   | Where fetched SSH host public keys are written.                    |
 | `ssh_host_pub_keys`     | dsa/rsa/ecdsa/ed25519   | List of `/etc/ssh/*.pub` filenames to consider for known_hosts.    |
+| `backuppc_client_ssh_pubkey_accepted_types` | `+ssh-rsa` | `sshd_config` `PubkeyAcceptedKeyTypes` value (Ubuntu 20.04+). Validated in preflight against `ssh -Q PubkeyAcceptedKeyTypes` on the target host. |
+| `backuppc_client_wrapper_path` | `/usr/local/bin/rsyncbackup-wrapper.sh` | Where the forced-command wrapper script (`files/usr/local/bin/rsyncbackup-wrapper.sh`) is deployed, and what each `backuppc_client` entry's `authorized_keys` `command=` restriction points at. See "The rsyncbackup-wrapper.sh pattern" below. |
 
 ### `vars/` (OS-specific, loaded via `include_vars` + `first_found`, not user-overridable)
 
@@ -37,12 +39,17 @@ scripts) so the BackupPC server can pull backups without a password.
 | `vars/RedHat.yml`| `ansible_os_family == 'RedHat'`  | `backuppc_client_packages` (no `pigz`)  |
 | `vars/default.yml`| fallback when nothing else matches | `backuppc_client_packages`            |
 
+### Required variables (no default; validated in Preflight below)
+
+| Variable                        | Purpose                                                                 |
+|-----------------------------------|----------------------------------------------------------------------------|
+| `backuppc_client`                | List of dicts: `username`, `home`, `shell`, `comment`, `authorized_keys`, `key_options`, `deprecated_keys`. Drives user creation, `authorized_keys`, and sudoers.d rules. Required (pass `[]` if this host has no backup users). |
+| `deprecated_backuppc_username`   | List of dicts: `username`. Old backup users to remove. Required; pass `[]` if there's nothing to remove. |
+
 ### Consumer-supplied variables (no default; role behavior is conditional on these being set)
 
 | Variable                        | Purpose                                                                 |
 |-----------------------------------|----------------------------------------------------------------------------|
-| `backuppc_client`                | List of dicts: `username`, `home`, `shell`, `comment`, `authorized_keys`, `key_options`, `deprecated_keys`. Drives user creation, `authorized_keys`, and sudoers.d rules. |
-| `deprecated_backuppc_username`   | List of usernames to remove (required - see Preflight below; pass `[]` if there's nothing to remove). |
 | `mysql_dump_script`              | Path to install the MySQL dump script; enables MySQL dump support when set. |
 | `postgres_dump_script`           | Path to install the Postgres dump script; enables Postgres dump support when set. |
 | `postgres_dump_file`             | Source file (under `files/`) for the Postgres dump script.             |
@@ -50,28 +57,83 @@ scripts) so the BackupPC server can pull backups without a password.
 | `backuppc_client_mysql_dump`     | List of dicts (same shape as `backuppc_client`) for MySQL-dump-specific `authorized_keys`. |
 | `backuppc_client_postgres_dump`  | List of dicts (same shape as `backuppc_client`) for Postgres-dump-specific `authorized_keys`. |
 
-Example `backuppc_client` entry:
+Example `backuppc_client` entry — the common case needs no `key_options`
+at all; the role forces `command=` to `backuppc_client_wrapper_path`
+automatically:
 
 ```yaml
+deprecated_backuppc_username: []
 backuppc_client:
-  - username: ''
-    home: ''
-    shell: '/bin/bash'
+  - username: rsyncbackup
+    home: /var/lib/rsyncbackup
+    shell: /bin/bash
     comment: 'BackupPC User'
-    authorized_keys: ''
-    key_options: 'command="sudo /usr/bin/rsync --server --sender -logDtpr --delete --numeric-ids --block-size=2048
-        --exclude=''/proc/*''
-        --exclude=''/sys/*''
-        --exclude=''/mnt/*''
-        --exclude=''/tmp/*''
-        --exclude=''/var/tmp/*''
-        --exclude=''/var/cache/apt/archives/*''
-        --exclude=''/var/log/*/*''
-        --exclude=''/var/log/*.*''
-        --exclude=''*.iso''
-        --exclude=''*.ova'' . /",
-        no-port-forwarding,no-X11-forwarding,no-agent-forwarding'
+    authorized_keys:
+      - "ssh-ed25519 AAAA... rsyncbackup@backuppc-server"
+    deprecated_keys: []
 ```
+
+Only set `key_options` directly if a host needs something other than
+the standard rsync-pull restriction (e.g. a completely different
+forced command).
+
+DSA (`ssh-dss`) keys in `authorized_keys` are rejected in preflight —
+this role's own `sshd_config` already excludes `ssh-dss` from
+`PubkeyAcceptedKeyTypes` on Ubuntu 20.04+, so a DSA key here would
+silently fail to authenticate. Use ed25519 or RSA.
+
+## The rsyncbackup-wrapper.sh pattern ##
+
+`authorized_keys` used to force a *frozen, hand-written* rsync
+command — the full invocation (flags, `--exclude` list, block-size)
+baked into `command=` at the time the key was provisioned. SSH's
+`command=` option means whatever the actual SSH client (BackupPC)
+sends in `$SSH_ORIGINAL_COMMAND` is discarded entirely and that fixed
+string runs instead. That's a stale-config trap: the moment either
+side's rsync version, protocol, or flags changes, the frozen command
+silently stops matching what BackupPC/`rsync_bpc` is actually asking
+for — confirmed as the root cause of a real production failure
+(`protocol version mismatch` / `rsync error: protocol incompatibility`)
+when a client's rsync was upgraded past the version the forced command
+was written for.
+
+`files/usr/local/bin/rsyncbackup-wrapper.sh` fixes this by validating
+the *shape* of the incoming command instead of substituting a copy of
+it:
+
+```bash
+case "$SSH_ORIGINAL_COMMAND" in
+  "/usr/bin/sudo /usr/bin/rsync --server --sender "*)
+    eval "exec $SSH_ORIGINAL_COMMAND"
+    ;;
+  *)
+    echo "Rejected command: $SSH_ORIGINAL_COMMAND" >&2
+    exit 1
+    ;;
+esac
+```
+
+The match pattern includes `/usr/bin/sudo /usr/bin/rsync` because
+`config.pl`'s `$Conf{RsyncClientPath}` is `/usr/bin/sudo /usr/bin/rsync`
+— that's the literal string BackupPC sends as `$SSH_ORIGINAL_COMMAND`,
+not a bare `rsync ...`. `eval "exec $SSH_ORIGINAL_COMMAND"` (not a bare
+unquoted `exec`) is required so quoted/escaped argument segments rsync
+sends get re-parsed correctly instead of just word-split on spaces —
+the same shell parsing the old hardcoded forced-command relied on.
+
+This keeps the same security property (the key can only ever trigger
+`/usr/bin/sudo /usr/bin/rsync --server --sender ...`, nothing else)
+while staying correct regardless of which rsync version or flags
+either side is currently using. It also means rsync flags/excludes are
+no longer this role's concern at all — they belong in the BackupPC
+server's `config.pl` (`RsyncArgs`/`RsyncArgsExtra`), applied once,
+server-side, rather than duplicated into every client's SSH key
+restriction.
+
+`Defaults:<user> !use_pty` is required alongside the sudoers
+`NOPASSWD:/usr/bin/rsync` rule (`tasks/sudoers_d.yml`) if the target's
+global `/etc/sudoers` has `Defaults use_pty` set — pty allocation under
+sudo can corrupt rsync's binary protocol stream.
 
 ## Task Flow ##
 
@@ -79,15 +141,28 @@ backuppc_client:
    host:
    * `ansible-core >= 2.20`
    * `os_family` is `Debian` or `RedHat`
-   * `deprecated_backuppc_username` is defined (list)
-   * every `backuppc_client` entry has `username`, `home`, and `shell`
+   * `deprecated_backuppc_username` is defined (list) and each entry
+     has `username`
+   * `backuppc_client` is defined (list) and each entry has `username`,
+     `home`, and `shell`
+   * no `backuppc_client`/`backuppc_client_mysql_dump`/
+     `backuppc_client_postgres_dump` entry's `authorized_keys` contains
+     a DSA (`ssh-dss`) key
+   * on Ubuntu 20.04+, `backuppc_client_ssh_pubkey_accepted_types` only
+     requests key types this host's `ssh -Q PubkeyAcceptedKeyTypes`
+     actually recognizes
 2. Gather OS-specific variables (`vars/`, via `first_found`)
 3. Install packages and configure sudoers.d, per OS family
    (`tasks/debian.yml`, `tasks/ubuntu.yml`, `tasks/redhat.yml`,
    `tasks/sudoers_d.yml`)
 4. Remove deprecated backuppc users
 5. Create the backuppc user(s) from `backuppc_client`
-6. Manage SSH `authorized_keys` (`tasks/ssh_keys.yml`)
+6. Manage SSH `authorized_keys` (`tasks/ssh_keys.yml`):
+   * deploy `rsyncbackup-wrapper.sh` to `backuppc_client_wrapper_path`
+   * set/remove `authorized_keys` entries
+   * verify: wrapper script is root-owned and executable; `sudo -l`
+     for each `backuppc_client` user shows the expected
+     `NOPASSWD: /usr/bin/rsync` rule
 7. `ssh-keyscan` the host into the BackupPC server's known_hosts, if
    `backuppc_ssh_key_scan` is defined (`tasks/known_hosts.yml`)
 
@@ -109,7 +184,9 @@ None.
             home: /var/lib/backuppc
             shell: /bin/bash
             comment: 'BackupPC User'
-            authorized_keys: "ssh-ed25519 AAAA..."
+            authorized_keys:
+              - "ssh-ed25519 AAAA..."
+            deprecated_keys: []
 ```
 
 ## License ##

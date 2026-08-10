@@ -7,6 +7,34 @@ argument_specs:
         rsync-over-ssh backup transport, and configures C(sudoers.d)
         rules for rsync (and, optionally, MySQL/Postgres dump scripts).
     options:
+      backuppc_client_ssh_pubkey_accepted_types:
+        type: str
+        required: false
+        default: "+ssh-rsa"
+        description:
+          - C(sshd_config) C(PubkeyAcceptedKeyTypes) value, templated into
+            C(/etc/ssh/sshd_config.d/PubkeyAcceptedKeyTypes.conf) on
+            Ubuntu 20.04+. Validated in preflight against
+            C(ssh -Q PubkeyAcceptedKeyTypes) on the target host - a
+            group_vars/host_vars override requesting a key type the
+            host's OpenSSH build doesn't recognize (e.g. the now
+            frequently-unsupported C(ssh-dss)) fails fast with a clear
+            message instead of erroring deep inside C(sshd -T)
+            validation.
+      backuppc_client_wrapper_path:
+        type: str
+        required: false
+        default: /usr/local/bin/rsyncbackup-wrapper.sh
+        description:
+          - Path C(files/usr/local/bin/rsyncbackup-wrapper.sh) is
+            deployed to, and that C(authorized_keys)' C(command=)
+            restriction points at. The wrapper validates
+            C($SSH_ORIGINAL_COMMAND) is actually C(rsync --server
+            --sender ...) and re-execs it via C(sudo), instead of a
+            frozen rsync command string baked into C(command=) at
+            key-provisioning time. rsync flags and excludes belong in
+            the BackupPC server's C(config.pl) (C(RsyncArgs)/
+            C(RsyncArgsExtra)), not in this host's SSH key restriction.
       known_host_keys_dir:
         type: str
         required: false
@@ -28,11 +56,14 @@ argument_specs:
       backuppc_client:
         type: list
         elements: dict
-        required: false
+        required: true
         description:
           - One entry per backup user to create on this host. Drives
             user creation, C(authorized_keys) management, and the rsync
-            C(sudoers.d) rule.
+            C(sudoers.d) rule. Required (pass C([]) if this host has no
+            backup users) - C(tasks/ssh_keys.yml) and
+            C(tasks/sudoers_d.yml) consume it without guarding on
+            definedness.
         options:
           username:
             type: str
@@ -56,14 +87,21 @@ argument_specs:
             required: false
             description:
               - SSH public key(s) to install in this user's
-                C(authorized_keys).
+                C(authorized_keys). DSA (C(ssh-dss)) keys are rejected
+                in preflight - this role's C(sshd_config) already
+                excludes C(ssh-dss) from C(PubkeyAcceptedKeyTypes) on
+                Ubuntu 20.04+, so a DSA key here would silently fail
+                to authenticate. Use ed25519 or RSA.
           key_options:
             type: str
             required: false
             description:
-              - C(authorized_keys) key options (e.g. a forced
-                C(command=) restricting the key to the rsync
-                transport).
+              - C(authorized_keys) key options, verbatim. If unset,
+                the role forces C(command=) to
+                I(backuppc_client_wrapper_path) instead - set this
+                only when a host needs something other than the
+                standard rsync-pull restriction (e.g. a completely
+                different forced command).
           deprecated_keys:
             type: list
             elements: str
@@ -76,13 +114,18 @@ argument_specs:
                 if the key is missing entirely rather than just empty.
       deprecated_backuppc_username:
         type: list
-        elements: str
+        elements: dict
         required: true
         description:
-          - Usernames of old backup users to remove. Required (pass
-            C([]) if there is nothing to remove) - C(tasks/main.yml) and
+          - Old backup users to remove. Required (pass C([]) if there
+            is nothing to remove) - C(tasks/main.yml) and
             C(tasks/sudoers_d.yml) both loop over this variable
             unconditionally.
+        options:
+          username:
+            type: str
+            required: true
+            description: Name of the old backup user to remove.
       mysql_dump_script:
         type: str
         required: false

@@ -1,4 +1,15 @@
 ---
+backuppc_client_ssh_pubkey_accepted_types: "+ssh-rsa"
+
+# Path the rsyncbackup-wrapper.sh forced command is deployed to, and
+# that authorized_keys' command= restriction points at. The wrapper
+# validates $SSH_ORIGINAL_COMMAND is actually "rsync --server --sender
+# ..." and re-execs it, rather than a hand-frozen rsync command string
+# baked into command= itself - see tasks/ssh_keys.yml. rsync flags and
+# excludes belong in the BackupPC server's config.pl (RsyncArgs /
+# RsyncArgsExtra), not here.
+backuppc_client_wrapper_path: /usr/local/bin/rsyncbackup-wrapper.sh
+
 known_host_keys_dir: "{{ playbook_dir }}"
 
 ssh_host_pub_keys:

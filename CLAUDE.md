@@ -112,11 +112,49 @@ credential) and already carries a `# noqa no-log-password` comment.
 ### Commit scopes
 
 Role-specific subsystem scopes: `ssh_keys`, `known_hosts`, `sudoers_d`,
-`mysql_dump`, `postgres_dump`, `debian`, `ubuntu`, `redhat`
+`sshd_config`, `mysql_dump`, `postgres_dump`, `debian`, `ubuntu`,
+`redhat`
 
 ### Settled decisions
 
-<!-- TODO: fill in settled decisions -->
+* DSA (`ssh-dss`) keys are deprecated role-wide, not just in
+  `sshd_config`'s `PubkeyAcceptedKeyTypes` (Ubuntu 20.04+, see
+  `backuppc_client_ssh_pubkey_accepted_types`). Preflight also rejects
+  any `ssh-dss` key found in `backuppc_client`/
+  `backuppc_client_mysql_dump`/`backuppc_client_postgres_dump`
+  `authorized_keys`. Consumers must supply ed25519 or RSA keys.
+  Regenerating/rotating actual key material for existing consumers is
+  a follow-up the consumer side owns, not something this role does.
+* `backuppc_client[].key_options` is optional: if unset, the role
+  forces `command=` to `backuppc_client_wrapper_path`
+  (`rsyncbackup-wrapper.sh`) rather than requiring every consumer to
+  hand-write and quote a full rsync command string. Set `key_options`
+  directly only when a host needs something other than the standard
+  rsync restriction.
+* `authorized_keys` no longer forces a frozen, hand-written rsync
+  command (flags/excludes baked in at provisioning time) — it forces
+  `rsyncbackup-wrapper.sh`, which validates `$SSH_ORIGINAL_COMMAND` is
+  actually `rsync --server --sender ...` and re-execs it via `sudo`.
+  Root cause: a real production failure (`protocol version mismatch`)
+  traced to the old frozen command silently discarding whatever
+  BackupPC/rsync actually negotiated, since `command=` always
+  overrides the client's real invocation. `backuppc_client_rsync_excludes`
+  and `backuppc_client[].rsync_excludes` were removed as a result —
+  rsync excludes are no longer this role's concern; they belong in the
+  BackupPC server's `config.pl` (`RsyncArgs`/`RsyncArgsExtra`), which
+  the wrapper's re-exec now actually lets take effect. This is a
+  BREAKING CHANGE for any consumer that set `backuppc_client_rsync_excludes`
+  or a per-entry `rsync_excludes` — those excludes must be moved to the
+  BackupPC server config instead (already consolidated as a shared
+  `RsyncArgsExtra` fragment in the server-side `config.pl` on at least
+  one consuming site).
+* `deprecated_backuppc_username` is a list of dicts with a `username`
+  key (matching `backuppc_client`'s shape), not a list of plain
+  strings — `tasks/sudoers_d.yml`'s "Delete old backuppc user from
+  sudoers.d" task and `meta/argument_specs.yml` both previously
+  disagreed with this (treating it as `elements: str`); both were
+  fixed to match `tasks/main.yml`'s actual (and consumers' actual)
+  usage.
 
 ### Open questions
 
@@ -135,9 +173,11 @@ commit. Stop and verify between items.
    `major_release|int < 6` and Ubuntu `< 20` monolithic-sudoers branches
    were dead weight (`sudoers.d` support predates every OS version this
    role can plausibly target) — `tasks/monolithic_sudoers.yml` and its
-   includes were removed; `tasks/ubuntu.yml`'s `< 16`/`< 20` version
-   branches for unrelated concerns (ssh-dss key acceptance) are still
-   open. Decide the fate of the large commented blocks in
+   includes were removed. Also settled: `ssh-dss` key-type acceptance
+   (Ubuntu `16–20` branch, the `PubkeyAcceptedKeyTypes.conf` fixture,
+   and Debian's commented removal task) was removed entirely — DSA is
+   long-deprecated in OpenSSH and unneeded on any currently-supported
+   platform. Decide the fate of the large commented blocks in
    `tasks/main.yml` and `tasks/ssh_keys.yml` (authorized_keys loop_var
    rework, ssh known_hosts fetch/add) — wire in, leave dead and
    document, or wire in behind an opt-in var.
@@ -149,7 +189,9 @@ commit. Stop and verify between items.
 3. **Refactor `meta/main.yml`** — drop `platforms:`, set
    `min_ansible_version: "2.20"`, add `namespace: realtime`, set
    `issue_tracker_url` from the GitLab remote
-   (`gitlab.real-time.com/ansible-roles/backuppc_client/-/issues`), fold
+   (`gitlab.real-time.com/ansible-roles/backuppc_client/-/issues`),
+   later repointed to the GitHub mirror
+   (`github.com/basictheprogram/ansible-role-backuppc_client/issues`), fold
    the OS/version support statement into `description:`, expand
    `galaxy_tags:` beyond `debian`/`linux`/`ubuntu` (e.g. `ssh`,
    `authorizedkeys`, `sudo`, `backuppc`, `redhat`).
@@ -279,7 +321,8 @@ Common Ansible role scopes: `tasks`, `handlers`, `templates`,
 `defaults`, `vars`, `meta`, `molecule`, `docker`.
 
 Role-specific subsystem scopes: `ssh_keys`, `known_hosts`, `sudoers_d`,
-`mysql_dump`, `postgres_dump`, `debian`, `ubuntu`, `redhat`
+`sshd_config`, `mysql_dump`, `postgres_dump`, `debian`, `ubuntu`,
+`redhat`
 
 Only include a scope when it adds clarity. Prefer a subsystem scope
 for feature-driven changes (e.g., `feat(tls): ...`) and a role-layout
