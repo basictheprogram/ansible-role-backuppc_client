@@ -15,7 +15,10 @@ scripts) so the BackupPC server can pull backups without a password.
 ## Supported Platforms ##
 
 * Debian: bookworm, trixie
-* Ubuntu: jammy (22.04)
+* Ubuntu: 20.04+ — `tasks/ubuntu.yml` gates on
+  `ansible_facts['lsb']['major_release'] >= 20`, not a specific
+  release; jammy (22.04), noble (24.04), and resolute (26.04) are
+  what's actually exercised in molecule
 * EL (RHEL/Rocky/AlmaLinux): 8, 9
 
 ## Role Variables ##
@@ -195,5 +198,4 @@ None.
 
 ## Author Information ##
 
-[Real Time Enterprises Inc.](http://www.real-time.com),
 [Bob Tanner](https://github.com/basictheprogram)
