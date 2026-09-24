@@ -107,6 +107,12 @@ it:
 ```bash
 case "$SSH_ORIGINAL_COMMAND" in
   "/usr/bin/sudo /usr/bin/rsync --server --sender "*)
+    case "$SSH_ORIGINAL_COMMAND" in
+      *'`'* | *'$('* | *';'* | *'|'* | *'&'*)
+        echo "Rejected command: contains shell metacharacters" >&2
+        exit 1
+        ;;
+    esac
     eval "exec $SSH_ORIGINAL_COMMAND"
     ;;
   *)
@@ -123,6 +129,13 @@ not a bare `rsync ...`. `eval "exec $SSH_ORIGINAL_COMMAND"` (not a bare
 unquoted `exec`) is required so quoted/escaped argument segments rsync
 sends get re-parsed correctly instead of just word-split on spaces —
 the same shell parsing the old hardcoded forced-command relied on.
+
+Because `eval` re-parses the *whole* string, a command that merely
+starts with the allowed prefix could still smuggle a shell
+metacharacter (`` ` ``, `$(`, `;`, `|`, `&`) later in the line and have
+it executed during that re-parse — the prefix check alone doesn't
+guarantee "rsync only". The inner `case` rejects any command
+containing one of those characters before `eval` ever sees it.
 
 This keeps the same security property (the key can only ever trigger
 `/usr/bin/sudo /usr/bin/rsync --server --sender ...`, nothing else)

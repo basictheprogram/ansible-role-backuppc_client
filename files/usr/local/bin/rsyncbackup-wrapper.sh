@@ -27,8 +27,21 @@
 # with embedded shell quoting) get re-parsed correctly instead of just
 # word-split on spaces - the same shell parsing the old hardcoded
 # forced-command approach relied on.
+#
+# Because eval re-parses the whole string, a command that merely
+# starts with the allowed prefix could still smuggle a shell
+# metacharacter (`, $(, ;, |, &) later in the line and have it
+# executed during that re-parse - the prefix check alone does not
+# guarantee "rsync only". Reject any command containing one of those
+# characters before eval ever sees it.
 case "$SSH_ORIGINAL_COMMAND" in
   "/usr/bin/sudo /usr/bin/rsync --server --sender "*)
+    case "$SSH_ORIGINAL_COMMAND" in
+      *'`'* | *'$('* | *';'* | *'|'* | *'&'*)
+        echo "Rejected command: contains shell metacharacters" >&2
+        exit 1
+        ;;
+    esac
     eval "exec $SSH_ORIGINAL_COMMAND"
     ;;
   *)

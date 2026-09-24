@@ -23,3 +23,6 @@ BACKUPPC_HOME: str = "/var/lib/rsyncbackup"
 BACKUPPC_TEST_PUBKEY: str = (
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOUGIZtlsKNcAGaU4n/peqnAfXNsiV5NQJx3+WR4i4A/ molecule-test-key"
 )
+
+# 6. rsyncbackup-wrapper.sh (defaults/main.yml's backuppc_client_wrapper_path).
+BACKUPPC_WRAPPER_PATH: str = "/usr/local/bin/rsyncbackup-wrapper.sh"

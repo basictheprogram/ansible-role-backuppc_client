@@ -117,6 +117,25 @@ Role-specific subsystem scopes: `ssh_keys`, `known_hosts`, `sudoers_d`,
 
 ### Settled decisions
 
+* `files/usr/local/bin/rsyncbackup-wrapper.sh` (2026-09-24): the
+  prefix-match `case` only checked that `$SSH_ORIGINAL_COMMAND`
+  *started with* the allowed rsync invocation, but `eval "exec
+  $SSH_ORIGINAL_COMMAND"` re-parses the *whole* string — so a command
+  matching the prefix could still smuggle a shell metacharacter
+  (`` ` ``, `$(`, `;`, `|`, `&`) later in the line and have it
+  executed during that re-parse. Anyone holding the SSH key could run
+  arbitrary commands as `rsyncbackup`, not just rsync. Not a new
+  privilege tier on its own (the key already implies broad root-level
+  trust via `sudo rsync`), but it broke the "rsync only" guarantee the
+  script's own comment describes. Fixed with an inner `case` that
+  rejects any of those five characters before `eval` ever runs,
+  keeping the pass-through design (rather than switching to `rrsync`,
+  which would reintroduce the exact staleness problem this wrapper was
+  built to avoid — see the header comment). Updated the matching code
+  block in README.md to stay in sync, and added
+  `molecule/default/tests/test_wrapper.py` — no test exercised the
+  wrapper's actual behavior before this, so the fix had no regression
+  coverage.
 * DSA (`ssh-dss`) keys are deprecated role-wide, not just in
   `sshd_config`'s `PubkeyAcceptedKeyTypes` (Ubuntu 20.04+, see
   `backuppc_client_ssh_pubkey_accepted_types`). Preflight also rejects
