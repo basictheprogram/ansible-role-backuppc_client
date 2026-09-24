@@ -29,7 +29,7 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.2
+    rev: v0.15.16
     hooks:
       - id: ruff
         name: Ruff check
@@ -41,7 +41,7 @@ repos:
         description: "Run 'ruff format' for extremely fast Python formatting"
 
   - repo: https://github.com/hadolint/hadolint
-    rev: v2.15.1
+    rev: v2.14.0
     hooks:
       - id: hadolint
         name: Lint Dockerfiles
