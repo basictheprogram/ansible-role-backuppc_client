@@ -117,6 +117,15 @@ Role-specific subsystem scopes: `ssh_keys`, `known_hosts`, `sudoers_d`,
 
 ### Settled decisions
 
+* `tasks/redhat.yml` never included `mysql_dump.yml`/`postgres_dump.yml`
+  (2026-09-24 finding) — unlike `debian.yml`, which does. This meant
+  `mysql_dump_script`/`postgres_dump_script` silently did nothing on
+  EL hosts despite EL being a claimed supported platform. Decided to
+  wire them in now (matching `debian.yml`'s pattern exactly) rather
+  than just document the gap. This is a behavior change for any
+  existing EL consumer that already sets `mysql_dump_script`/
+  `postgres_dump_script` expecting it to be a no-op — it will now
+  actually run.
 * `files/usr/local/bin/rsyncbackup-wrapper.sh` (2026-09-24): the
   prefix-match `case` only checked that `$SSH_ORIGINAL_COMMAND`
   *started with* the allowed rsync invocation, but `eval "exec
@@ -179,71 +188,112 @@ Role-specific subsystem scopes: `ssh_keys`, `known_hosts`, `sudoers_d`,
 
 If a task touches one of these, leave a `# TODO(open-q):` comment:
 
-<!-- TODO: fill in open questions -->
+* `files/snapshot_pct.sh`, `files/snapshot_qm.sh`, `files/dump_mongodb.sh`
+  are all empty and unreferenced by any task. Wire one in, or remove
+  them — neither decided yet.
+* `tasks/known_hosts.yml` (the `backuppc_ssh_key_scan` feature) has no
+  molecule test coverage — it delegates to an external BackupPC
+  server, which doesn't fit a single-container fixture cleanly. Would
+  need a multi-node molecule scenario or an equivalent workaround.
 
 ### Implementation order
 
 Work one section at a time. Each item = one focused session and one
 commit. Stop and verify between items.
 
-1. **ansible-core 2.20 compliance** (`tasks/`) — `include_vars`
-   `first_found` already points at `vars/`, good. Loop vars already use
-   the `backuppc_client_`/`known_hosts` prefix pattern. Settled: RedHat
-   `major_release|int < 6` and Ubuntu `< 20` monolithic-sudoers branches
-   were dead weight (`sudoers.d` support predates every OS version this
-   role can plausibly target) — `tasks/monolithic_sudoers.yml` and its
-   includes were removed. Also settled: `ssh-dss` key-type acceptance
-   (Ubuntu `16–20` branch, the `PubkeyAcceptedKeyTypes.conf` fixture,
-   and Debian's commented removal task) was removed entirely — DSA is
-   long-deprecated in OpenSSH and unneeded on any currently-supported
-   platform. Decide the fate of the large commented blocks in
-   `tasks/main.yml` and `tasks/ssh_keys.yml` (authorized_keys loop_var
-   rework, ssh known_hosts fetch/add) — wire in, leave dead and
-   document, or wire in behind an opt-in var.
-2. **Lint clean** (`.ansible-lint`) — no `meta/argument_specs.yml` yet;
-   add one documenting `defaults/main.yml`. Check `files/` copy/template
-   tasks for explicit `mode:`. `files/snapshot_pct.sh` and
-   `files/snapshot_qm.sh` are empty and not referenced by any task —
-   orphaned, flag in `TODO.md`.
-3. **Refactor `meta/main.yml`** — drop `platforms:`, set
-   `min_ansible_version: "2.20"`, add `namespace: realtime`, set
-   `issue_tracker_url` from the GitLab remote
-   (`gitlab.real-time.com/ansible-roles/backuppc_client/-/issues`),
-   later repointed to the GitHub mirror
-   (`github.com/basictheprogram/ansible-role-backuppc_client/issues`), fold
-   the OS/version support statement into `description:`, expand
-   `galaxy_tags:` beyond `debian`/`linux`/`ubuntu` (e.g. `ssh`,
-   `authorizedkeys`, `sudo`, `backuppc`, `redhat`).
-4. **LICENSE copyright stack** — no `LICENSE` file exists in this role;
-   skip unless one gets added.
-5. **`defaults/` vs `vars/` split** — `defaults/Debian.yml` duplicates
-   `vars/Debian.yml`'s `known_host_keys_dir`/`ssh_host_pub_keys` content
-   and isn't OS-agnostic; move anything still needed into
-   `defaults/main.yml` or drop it, then delete `defaults/Debian.yml`.
-6. **Preflight assertions** — add `tasks/preflight.yml`: ansible version
-   check, supported OS family check, and validation that each
-   `backuppc_client[]` entry has `username`/`home`/`shell` set (the
-   fields `tasks/main.yml`'s user-creation loop depends on).
-7. **README update** — rewrite from the current boilerplate template
-   text into real content: requirements (`Ansible core >= 2.20`),
-   supported platforms, `defaults/main.yml`/`vars/` variable tables,
-   task flow including preflight.
-8. **`molecule/default/molecule.yml` platform matrix + testinfra
-   verifier** — align platform list with the `meta/main.yml`
-   description sentence from step 3; switch to the testinfra verifier.
-9. **Rewrite `converge.yml`** — remove any site-specific content, add
-   the standard cache-update `pre_tasks`.
-10. **Self-contained fixtures** — anonymize `molecule/default/group_vars/`
-    if present; generate a throwaway SSH keypair fixture for the
-    authorized_keys path.
-11. **pytest-testinfra suite** — replace the current Ansible-based
-    `verify.yml` with `molecule/default/tests/` skeletons covering
-    packages, sudoers.d files, and the backuppc user/authorized_keys.
-12. **`molecule/requirements.txt`** — add the pinned test-tooling
-    requirements file; update `INSTALL.rst` to match. No
-    `community.general`/other-collection modules found in use yet, so no
-    role-root `requirements.yml` needed unless step 9's fixture work
-    introduces one (e.g. for git-based fixtures).
+All 13 steps of the `ansible-sync-role` skill are done as of
+2026-09-24. This section previously claimed several were still
+pending (no `meta/argument_specs.yml`, no `LICENSE`, README still
+boilerplate, etc.) when they'd actually already been completed in an
+earlier, undocumented session — a real gap between this file and the
+repo's actual state. Rewritten below to describe what's actually true
+today, not a stale backlog.
+
+1. **ansible-core 2.20 compliance** — done. `ansible_facts['...']`
+   used throughout; loop vars correctly `backuppc_client_`-prefixed.
+   Fixed 2026-09-24: `redhat.yml`'s `common_library` debug task
+   referenced an undefined variable (crashed every RedHat run) and
+   used `ansible.builtin.yum` instead of `dnf`; several `tags:
+   backuppc` typos (should be `backuppc_client`); `postgres_dump.yml`
+   was missing the `is defined` guard `mysql_dump.yml`'s equivalent
+   task already had. Removed ~140 lines of dead commented-out code
+   (superseded alternates in `tasks/main.yml`/`tasks/ssh_keys.yml`,
+   the "sshuttle" sudoers block) and 8 unconditional debug/cruft
+   tasks, per your decisions. Parameterized `known_hosts.yml`'s
+   hardcoded `backuppc.castle.real-time.com` hostname and
+   `remote_user`/`owner`/`group` into real role variables. Wired
+   `mysql_dump.yml`/`postgres_dump.yml` into `redhat.yml` (were only
+   ever included from `debian.yml`) — see Settled decisions.
+2. **Lint clean** — done, zero `ansible-lint` violations at the
+   `production` profile. `meta/argument_specs.yml` exists and is kept
+   current (updated 2026-09-24 for the new `known_hosts` variables and
+   to give `backuppc_client_mysql_dump`/`_postgres_dump` their own
+   correct nested schema instead of claiming "same shape as
+   backuppc_client", which was never true). `files/snapshot_pct.sh`,
+   `files/snapshot_qm.sh`, and `files/dump_mongodb.sh` remain
+   orphaned (all three empty, unreferenced) — flagged in `TODO.md`.
+3. **`meta/main.yml`** — done. No `platforms:` key, `min_ansible_version:
+   "2.20"`, `namespace: realtime`, `issue_tracker_url` points at the
+   GitHub mirror. Updated 2026-09-24: dropped Debian bookworm, Ubuntu
+   20.04/focal, and EL 8 from the supported-platform description (all
+   EOL); added EL 10. Settled platform list: Debian (trixie), Ubuntu
+   (jammy, noble, resolute), EL (9, 10).
+4. **LICENSE** — done. `LICENSE` exists (MIT, Real Time Enterprises,
+   Inc.), matches `meta/main.yml`'s `license: MIT`.
+5. **`defaults/`/`vars/` split** — done. `defaults/main.yml` has no
+   OS-specific content. Removed 2026-09-24: `vars/jammy.yml` (a
+   byte-identical duplicate of `vars/Ubuntu.yml` sitting at a more
+   specific `first_found` tier for no reason) and the
+   `known_host_keys_dir`/`ssh_host_pub_keys` defaults, which became
+   orphaned once the dead-code cleanup in step 1 removed their only
+   consumer.
+6. **Preflight assertions** — done. `tasks/preflight.yml` covers
+   ansible version, OS family, `deprecated_backuppc_username`/
+   `backuppc_client` definedness and entry shape, no DSA keys, Ubuntu
+   pubkey-type support. Added 2026-09-24:
+   `backuppc_client_known_hosts_server` required whenever
+   `backuppc_ssh_key_scan` is set; `postgres_dump_file` required
+   whenever `postgres_dump_script` is set (its consuming task used it
+   unconditionally with no such guarantee).
+7. **README** — done, real content throughout (not boilerplate).
+   Updated 2026-09-24 for the platform-list, defaults-table, and
+   preflight-list changes above.
+8. **`molecule.yml` platform matrix + verifier** — done. Testinfra
+   verifier already in place. Updated 2026-09-24: dropped the
+   bookworm and Rocky 8 instances, added Rocky 10, renamed all
+   instances to the fleet's `<os>-<codename>` convention (were
+   `backuppc-client-molecule-<codename>-instance`), lowercased
+   `dependency.name`/`provisioner.name` (`Galaxy`/`Ansible` →
+   `galaxy`/`ansible`).
+9. **`converge.yml`** — done, self-contained, standard cache-update
+   `pre_tasks` already present. Fixed 2026-09-24: the fixture set
+   `key_options: ''` on its `backuppc_client` entry, which is NOT the
+   same as omitting the key — Jinja's `default()` filter only
+   substitutes on genuinely undefined values, not falsy ones. This
+   meant the fixture had never actually exercised the documented
+   "common case" (omit `key_options`, get the wrapper `command=`
+   forced automatically); it silently tested a different, broken path
+   the whole time. Removed the empty-string override and added
+   `test_backuppc_authorized_keys_forces_wrapper_command` to actually
+   verify the `command=` restriction is present.
+10. **Self-contained fixtures** — done, nothing further needed. No
+    `group_vars/`; `converge.yml`'s vars are inline; already uses a
+    clearly-fake throwaway SSH key (`molecule-test-key`).
+11. **pytest-testinfra suite** — done. Existing suite (`test_packages.py`,
+    `test_config.py`, `test_backuppc_user.py`) already solid. Added
+    2026-09-24: `test_wrapper.py` (regression coverage for the
+    shell-injection fix — see Settled decisions), and the
+    `command=`-restriction assertion in `test_backuppc_user.py` above.
+    `tasks/known_hosts.yml` (the `backuppc_ssh_key_scan` feature)
+    remains untested — it delegates to an external server, which is
+    inherently hard to fixture in a single-container molecule
+    scenario; flagged in `TODO.md` rather than building a multi-node
+    fixture for it now.
+12. **`molecule/requirements.txt` / role-root `requirements.yml`** —
+    done. `requirements.yml` correctly declares `ansible.posix`
+    (`authorized_key`) and `ansible.utils` (the `ipaddr` filter in
+    `known_hosts.yml`) — verified against actual usage 2026-09-24,
+    nothing missing and nothing stale.
 
 ### Consumer side notes
 
