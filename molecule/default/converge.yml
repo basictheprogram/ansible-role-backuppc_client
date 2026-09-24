@@ -13,7 +13,6 @@
         authorized_keys:
           - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOUGIZtlsKNcAGaU4n/peqnAfXNsiV5NQJx3+WR4i4A/ molecule-test-key"
         deprecated_keys: []
-        key_options: ''
 
   environment:
     TZ: "America/Chicago"   # Keep tzdata pacakge happy

@@ -1,10 +1,10 @@
 ---
 dependency:
-  name: Galaxy
+  name: galaxy
 driver:
-  name: Docker
+  name: docker
 platforms:
-  - name: backuppc-client-molecule-jammy-instance
+  - name: ubuntu-jammy
     image: "geerlingguy/docker-ubuntu2204-ansible:latest"
     tmpfs:
       - /run
@@ -13,7 +13,7 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
     pre_build_image: true
-  - name: backuppc-client-molecule-noble-instance
+  - name: ubuntu-noble
     image: "geerlingguy/docker-ubuntu2404-ansible:latest"
     tmpfs:
       - /run
@@ -22,7 +22,7 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
     pre_build_image: true
-  - name: backuppc-client-molecule-resolute-instance
+  - name: ubuntu-resolute
     image: "geerlingguy/docker-ubuntu2604-ansible:latest"
     tmpfs:
       - /run
@@ -31,16 +31,7 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
     pre_build_image: true
-  - name: backuppc-client-molecule-bookworm-instance
-    image: "geerlingguy/docker-debian12-ansible:latest"
-    tmpfs:
-      - /run
-      - /tmp
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
-    privileged: true
-    pre_build_image: true
-  - name: backuppc-client-molecule-trixie-instance
+  - name: debian-trixie
     image: "geerlingguy/docker-debian13-ansible:latest"
     tmpfs:
       - /run
@@ -49,16 +40,7 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
     pre_build_image: true
-  - name: backuppc-client-molecule-rockylinux8-instance
-    image: "geerlingguy/docker-rockylinux8-ansible:latest"
-    tmpfs:
-      - /run
-      - /tmp
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:ro
-    privileged: true
-    pre_build_image: true
-  - name: backuppc-client-molecule-rockylinux9-instance
+  - name: rockylinux-9
     image: "geerlingguy/docker-rockylinux9-ansible:latest"
     tmpfs:
       - /run
@@ -67,8 +49,17 @@ platforms:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     privileged: true
     pre_build_image: true
+  - name: rockylinux-10
+    image: "geerlingguy/docker-rockylinux10-ansible:latest"
+    tmpfs:
+      - /run
+      - /tmp
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    privileged: true
+    pre_build_image: true
 provisioner:
-  name: Ansible
+  name: ansible
   playbooks:
     prepare: prepare.yml
     converge: converge.yml
