@@ -3,11 +3,6 @@
   ansible.builtin.include_tasks: preflight.yml
   tags: always
 
-- name: Release, distribution, family
-  ansible.builtin.debug:
-    msg: "distribution_release:{{ ansible_facts['distribution_release'] }} distribution:{{ ansible_facts['distribution'] }} os_family:{{ ansible_facts['os_family'] }} release:{{ ansible_facts['lsb']['major_release'] }}"
-  tags: backuppc_client
-
 - name: Gather OS specific variables
   ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
   vars:
@@ -69,72 +64,6 @@
   changed_when: false
   notify: known_hosts
   tags: backuppc_client
-
-# - name: Debug backuppc_client structure
-#   debug:
-#     var: backuppc_client
-
-# - name: Set up backuppc user authorized_keys (only if backuppc_client is defined)
-#   when:
-#     - backuppc_client is defined
-#     - backuppc_client | length > 0
-#   block:
-#     - name: Set up backuppc user authorized_keys
-#       ansible.posix.authorized_key:
-#         user: "{{ backuppc_client_item.0.username }}"
-#         state: "present"
-#         # key_options: "{{ backuppc_client_item.0.key_options | default(omit) }}"
-#         key_options: "{{ backuppc_client_item.key_options | default(omit) }}"
-#         # key: "{{ backuppc_client_item.1 }}"
-#         key: "{{ backuppc_client_item.authorized_keys }}"
-#         manage_dir: true
-#       # loop: "{{ backuppc_client | subelements('authorized_keys') }}"
-#       loop: "{{ backuppc_client }}"
-#       loop_control:
-#         loop_var: backuppc_client_item
-#   tags: backuppc_client
-
-# TODO: add hosts ssh key(s) to known_hosts file
-# TODO: confirm host has a .pl file on the backuppc server
-
-# Can override the location "{{ known_host_keys_dir }}"
-# default is in defaults/main.yml
-#
-# - name: Fetch ssh public keys
-#  fetch:
-#    src: "/etc/ssh/{{ item }}"
-#    dest: "{{ known_host_keys_dir }}/known_host_keys"
-#  with_items:
-#      - "{{ ssh_host_pub_keys }}"
-#  ignore_errors: yes
-#  register: ssh_host_keys
-#  tags: backuppc_client
-#
-# - debug:
-#    msg: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
-#  when:
-#    - not item.failed
-#  with_items:
-#    - "{{ ssh_host_keys.results }}"
-#  ignore_errors: yes
-#  tags: backuppc_client
-#
-# - name: Add ssh host key to backuppc known_hosts
-#  known_hosts:
-#    path: /etc/ssh/ssh_known_hosts
-#    name: "{{ ansible_fqdn }}"
-#    key: "{{ ansible_fqdn }},{{ ansible_default_ipv4.address }} {{ lookup('file', item.dest).split(' ')[0:-1] | join(' ') }}"
-#    state: present
-#  when:
-#    - backuppc_server_hostname is defined
-#    - not item.failed
-#  with_items:
-#    - "{{ ssh_host_keys.results }}"
-#  delegate_to: "{{ backuppc_server_hostname }}"
-#  remote_user: ansible
-#  changed_when:
-#    - item.changed
-#  tags: backuppc_client
 
 - name: Include tasks ssh_keys.yml
   ansible.builtin.include_tasks: ssh_keys.yml

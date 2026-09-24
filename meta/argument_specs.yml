@@ -35,24 +35,33 @@ argument_specs:
             key-provisioning time. rsync flags and excludes belong in
             the BackupPC server's C(config.pl) (C(RsyncArgs)/
             C(RsyncArgsExtra)), not in this host's SSH key restriction.
-      known_host_keys_dir:
+      backuppc_client_known_hosts_server:
         type: str
         required: false
-        default: "{{ playbook_dir }}"
         description:
-          - Directory fetched SSH host public keys are written to.
-      ssh_host_pub_keys:
-        type: list
-        elements: str
+          - BackupPC server hostname that C(tasks/known_hosts.yml)'s
+            C(ssh-keyscan) results are delegated to (and whose
+            C(known_hosts) file gets updated). Required whenever
+            I(backuppc_ssh_key_scan) is set - checked in preflight.
+      backuppc_client_known_hosts_remote_user:
+        type: str
         required: false
-        default:
-          - ssh_host_dsa_key.pub
-          - ssh_host_rsa_key.pub
-          - ssh_host_ecdsa_key.pub
-          - ssh_host_ed25519_key.pub
+        default: ansible
         description:
-          - Filenames under C(/etc/ssh/) to consider when populating
-            known_hosts.
+          - Remote user C(tasks/known_hosts.yml) connects to
+            I(backuppc_client_known_hosts_server) as.
+      backuppc_client_known_hosts_owner:
+        type: str
+        required: false
+        default: backuppc
+        description:
+          - Owner set on the BackupPC server's C(known_hosts) file.
+      backuppc_client_known_hosts_group:
+        type: str
+        required: false
+        default: backuppc
+        description:
+          - Group set on the BackupPC server's C(known_hosts) file.
       backuppc_client:
         type: list
         elements: dict
@@ -158,13 +167,44 @@ argument_specs:
         elements: dict
         required: false
         description:
-          - Same shape as I(backuppc_client); grants MySQL-dump-specific
-            C(authorized_keys) via C(tasks/mysql_dump.yml).
+          - Grants MySQL-dump-specific C(authorized_keys) via
+            C(tasks/mysql_dump.yml). Not the same shape as
+            I(backuppc_client) - no C(home)/C(shell)/C(deprecated_keys)
+            concept here, just an authorized_keys grant on an existing
+            user.
+        options:
+          username:
+            type: str
+            required: true
+            description: Existing user to grant the authorized_keys to.
+          authorized_keys:
+            type: list
+            elements: str
+            required: true
+            description: SSH public key(s) to install.
+          key_options:
+            type: str
+            required: true
+            description: C(authorized_keys) key options, verbatim.
       backuppc_client_postgres_dump:
         type: list
         elements: dict
         required: false
         description:
-          - Same shape as I(backuppc_client); grants
-            Postgres-dump-specific C(authorized_keys) via
-            C(tasks/postgres_dump.yml).
+          - Grants Postgres-dump-specific C(authorized_keys) via
+            C(tasks/postgres_dump.yml). Same shape as
+            I(backuppc_client_mysql_dump).
+        options:
+          username:
+            type: str
+            required: true
+            description: Existing user to grant the authorized_keys to.
+          authorized_keys:
+            type: list
+            elements: str
+            required: true
+            description: SSH public key(s) to install.
+          key_options:
+            type: str
+            required: true
+            description: C(authorized_keys) key options, verbatim.

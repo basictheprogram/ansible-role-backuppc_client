@@ -1,5 +1,0 @@
----
-backuppc_client_packages:
-  - openssh-server
-  - pigz
-  - rsync

@@ -1,9 +1,4 @@
 ---
-- name: Debug
-  ansible.builtin.debug:
-    msg: "/etc/sudoers.d"
-  tags: backuppc_client
-
 - name: Delete old backuppc user from sudoers.d
   ansible.builtin.file:
     path: "/etc/sudoers.d/{{ backuppc_client_item.username }}"
@@ -40,7 +35,7 @@
     loop_var: backuppc_client_item
   when:
     - mysql_dump_script is defined
-  tags: backuppc
+  tags: backuppc_client
 
 - name: Add backuppc user Postgres dump to sudoers.d    # noqa template-instead-of-copy
   ansible.builtin.copy:
@@ -54,16 +49,4 @@
     loop_var: backuppc_client_item
   when:
     - postgres_dump_script is defined
-  tags: backuppc
-
-# - name: Add backuppc user (sshuttle) to sudoers.d    # noqa template-instead-of-copy
-#   ansible.builtin.copy:
-#     content: |
-#       {{ backuppc_client_item.username }} ALL=NOPASSWD:/usr/bin/sshuttle
-
-#     dest: "/etc/sudoers.d/{{ backuppc_client_item.username }}_sshuttle"
-#     mode: "0440"
-#   loop: "{{ backuppc_client }}"
-#   loop_control:
-#     loop_var: backuppc_client_item
-#   tags: backuppc_client
+  tags: backuppc_client

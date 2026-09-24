@@ -19,7 +19,7 @@
       ansible.builtin.include_tasks: sudoers_d.yml
       tags: backuppc_client
 
-- name: Uubntu unsupported release
+- name: Ubuntu unsupported release
   ansible.builtin.debug:
     msg: "Ubuntu {{ ansible_facts['distribution_release'] }} is not supported"
   when:

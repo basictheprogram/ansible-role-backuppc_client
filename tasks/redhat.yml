@@ -1,13 +1,20 @@
 ---
-- name: Install backuppc client packages (yum)
-  ansible.builtin.yum:
+- name: Install backuppc client packages (dnf)
+  ansible.builtin.dnf:
     name: "{{ backuppc_client_packages }}"
     state: "present"
-  tags: backuppc
+  tags: backuppc_client
 
-- name: Debug common_library
-  ansible.builtin.debug:
-    msg: "common_library: {{ common_library }}"
+- name: RedHat dump mysql databases
+  ansible.builtin.include_tasks: mysql_dump.yml
+  when:
+    - mysql_dump_script is defined
+  tags: backuppc_client
+
+- name: RedHat dump postgres databases
+  ansible.builtin.include_tasks: postgres_dump.yml
+  when:
+    - postgres_dump_script is defined
   tags: backuppc_client
 
 - name: Configure /etc/sudoers.d

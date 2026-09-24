@@ -24,32 +24,6 @@
       command="{{ backuppc_client_wrapper_path }}",no-port-forwarding,no-X11-forwarding,no-agent-forwarding
   tags: backuppc_client
 
-# - name: Debug each entry in backuppc_client
-#   debug:
-#     msg: "{{ item }}"
-#   loop: "{{ backuppc_client }}"
-#   tags: backuppc_client
-
-# - name: Set up backuppc user authorized_keys (only if backuppc_client is defined)
-#   when:
-#     - backuppc_client is defined
-#     - backuppc_client | length > 0
-#   block:
-#     - name: Set up backuppc user authorized_keys (ssh_keys)
-#       ansible.posix.authorized_key:
-#         user: "{{ backuppc_client_item.username }}"
-#         state: "present"
-#         key_options: "{{ backuppc_client_item.key_options | default(omit) }}"
-#         key: "{{ backuppc_client_item.authorized_keys }}"
-#         manage_dir: true
-#       loop: "{{ backuppc_client }}"
-#       loop_control:
-#         loop_var: backuppc_client_item
-#   tags: backuppc_client
-
-# TODO: task to remove old/deprecated autheorized_keys?
-# http://www.freekb.net/Article?id=2704
-
 - name: Remove ssh key(s) from backuppc user
   ansible.posix.authorized_key:
     # path: /var/lib/rsyncbackup/.ssh/authorized_keys
@@ -60,24 +34,6 @@
   loop_control:
     loop_var: backuppc_client_item
   tags: backuppc_client
-
-# - name: Remove ssh key(s) from backuppc user (only if backuppc_client is defined and contains deprecated_keys)
-#   when:
-#     - backuppc_client is defined
-#     - backuppc_client | length > 0
-#   block:
-#     - name: Remove ssh key(s) from backuppc user
-#       ansible.posix.authorized_key:
-#         # user: "{{ backuppc_client_item.0.username }}"
-#         user: "{{ backuppc_client_item.username }}"
-#         state: absent
-#         # key: "{{ backuppc_client_item.1 }}"
-#         key: "{{ backuppc_client_item.deprecated_keys }}"
-#         # loop: "{{ backuppc_client | subelements('deprecated_keys') }}"
-#         loop: "{{ backuppc_client }}"
-#       loop_control:
-#         loop_var: backuppc_client_item
-#   tags: backuppc_client
 
 - name: Verify - rsyncbackup-wrapper.sh is root-owned and executable
   ansible.builtin.stat:

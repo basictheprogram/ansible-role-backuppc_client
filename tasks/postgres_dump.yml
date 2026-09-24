@@ -1,17 +1,4 @@
 ---
-- name: Debug backuppc_client_postgres_dump
-  ansible.builtin.debug:
-    msg: "{{ backuppc_client_postgres_dump }}"
-  tags: backuppc_client
-
-- name: Debug username and authorized_keys
-  ansible.builtin.debug:
-    msg: "{{ backuppc_client_item.0.username }} - {{ backuppc_client_item.1 }}"
-  loop: "{{ backuppc_client_postgres_dump | subelements('authorized_keys') }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  tags: backuppc_client
-
 - name: Set up backuppc user Postgres dump authorized_keys
   ansible.posix.authorized_key:
     user: "{{ backuppc_client_item.0.username }}"
@@ -22,6 +9,7 @@
   loop: "{{ backuppc_client_postgres_dump | subelements('authorized_keys') }}"
   loop_control:
     loop_var: backuppc_client_item
+  when: backuppc_client_postgres_dump is defined
   tags: backuppc_client
 
 - name: Copy Postgres dump script

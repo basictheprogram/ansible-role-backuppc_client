@@ -107,6 +107,29 @@
     - ansible_facts['distribution'] == 'Ubuntu'
     - ansible_facts['lsb']['major_release'] | int >= 20
 
+- name: Preflight - assert known_hosts server is set when key-scanning is enabled
+  ansible.builtin.assert:
+    that:
+      - backuppc_client_known_hosts_server is defined
+    fail_msg: >-
+      backuppc_ssh_key_scan is set, which enables tasks/known_hosts.yml,
+      but backuppc_client_known_hosts_server (the BackupPC server
+      ssh-keyscan results are delegated to) is not defined.
+    quiet: true
+  when: backuppc_ssh_key_scan is defined
+
+- name: Preflight - assert postgres_dump_file is set when postgres_dump_script is
+  ansible.builtin.assert:
+    that:
+      - postgres_dump_file is defined
+    fail_msg: >-
+      postgres_dump_script is set, which enables
+      tasks/postgres_dump.yml, but postgres_dump_file (the source file
+      under files/ to copy to postgres_dump_script) is not defined -
+      "Copy Postgres dump script" uses it unconditionally.
+    quiet: true
+  when: postgres_dump_script is defined
+
 - name: Preflight - assert backuppc_client_ssh_pubkey_accepted_types is supported
   ansible.builtin.assert:
     that:

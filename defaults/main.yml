@@ -10,10 +10,11 @@ backuppc_client_ssh_pubkey_accepted_types: "+ssh-rsa"
 # RsyncArgsExtra), not here.
 backuppc_client_wrapper_path: /usr/local/bin/rsyncbackup-wrapper.sh
 
-known_host_keys_dir: "{{ playbook_dir }}"
-
-ssh_host_pub_keys:
-  - "ssh_host_dsa_key.pub"
-  - "ssh_host_rsa_key.pub"
-  - "ssh_host_ecdsa_key.pub"
-  - "ssh_host_ed25519_key.pub"
+# tasks/known_hosts.yml (only runs when backuppc_ssh_key_scan is
+# defined) ssh-keyscans this client and records it in the BackupPC
+# server's known_hosts, delegated to backuppc_client_known_hosts_server.
+# That variable has no default -- it's required whenever
+# backuppc_ssh_key_scan is set (see tasks/preflight.yml).
+backuppc_client_known_hosts_remote_user: ansible
+backuppc_client_known_hosts_owner: backuppc
+backuppc_client_known_hosts_group: backuppc

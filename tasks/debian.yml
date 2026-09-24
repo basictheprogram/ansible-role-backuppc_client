@@ -19,11 +19,6 @@
     - postgres_dump_script is defined
   tags: backuppc_client
 
-# - name: Debug common_library
-#   ansible.builtin.debug:
-#     msg: "common_library: {{ common_library }}"
-#   tags: backuppc_client
-
 - name: Debian major_release >= 10
   when:
     - ansible_facts['lsb']['major_release'] | int >= 10
@@ -32,9 +27,3 @@
   block:
     - name: Debian (>=10) configure /etc/sudoers.d
       ansible.builtin.include_tasks: sudoers_d.yml
-
-# - name: Debian unsupported release
-#   ansible.builtin.debug:
-#     msg: "Ubuntu {{ ansible_distribution_release }} is not supported"
-#   when:
-#     - ansible_lsb.major_release|int < 16

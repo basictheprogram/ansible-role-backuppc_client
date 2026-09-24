@@ -1,53 +1,28 @@
 ---
-# - name: Create temporary directory
-#   ansible.builtin.tempfile:
-#     state: directory
-#     suffix: known_hosts
-#   register: known_hosts
-#   notify:
-#     - Delete tempdir
-#   tags: backuppc_client
-
-# Remove duplicate
-# sort -k3 -u ~/.ssh/known_hosts
-
-- name: Debug
-  ansible.builtin.debug:
-    msg: "{{ inventory_hostname }}::{{ ansible_ssh_host }}"
-  tags: backuppc_client
-
-# Error? Is the ansible user ssh key loaded?
-#
 - name: Run ssh-keyscan (IP addresses)
   ansible.builtin.shell: ssh-keyscan -p "{{ ansible_ssh_port | default(22) }}" -H "{{ ansible_ssh_host }}" >> /var/lib/backuppc/.ssh/known_hosts
-  remote_user: ansible
-  delegate_to: backuppc.castle.real-time.com
+  remote_user: "{{ backuppc_client_known_hosts_remote_user }}"
+  delegate_to: "{{ backuppc_client_known_hosts_server }}"
   throttle: 1
   when: ansible_ssh_host | ansible.utils.ipaddr
+  changed_when: true
   tags: backuppc_client
 
 - name: Run ssh-keyscan (hostname)
   ansible.builtin.shell: ssh-keyscan -p "{{ ansible_ssh_port | default(22) }}" -H "{{ inventory_hostname }}" >> /var/lib/backuppc/.ssh/known_hosts
-  remote_user: ansible
-  delegate_to: backuppc.castle.real-time.com
+  remote_user: "{{ backuppc_client_known_hosts_remote_user }}"
+  delegate_to: "{{ backuppc_client_known_hosts_server }}"
   throttle: 1
   when: not (ansible_ssh_host | ansible.utils.ipaddr)
+  changed_when: true
   tags: backuppc_client
-
-# - name: Remove key(s) from ssh known_hosts
-#   ansible.builtin.known_hosts:
-#     name: '[backuppc@scribe]'
-#     path: /var/lib/rsyncbackup/.ssh/known_hosts
-#     state: absent
-#   throttle: 1
-#   tags: backuppc_client
 
 - name: Set permissions
   ansible.builtin.file:
     path: /var/lib/backuppc/.ssh/known_hosts
-    owner: backuppc
-    group: backuppc
+    owner: "{{ backuppc_client_known_hosts_owner }}"
+    group: "{{ backuppc_client_known_hosts_group }}"
     mode: "0600"
-  remote_user: ansible
-  delegate_to:  backuppc.castle.real-time.com
+  remote_user: "{{ backuppc_client_known_hosts_remote_user }}"
+  delegate_to: "{{ backuppc_client_known_hosts_server }}"
   tags: backuppc_client

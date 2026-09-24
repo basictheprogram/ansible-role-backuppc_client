@@ -1,18 +1,4 @@
 ---
-- name: Debug backuppc_client_mysql_dump
-  ansible.builtin.debug:
-    msg: "{{ backuppc_client_mysql_dump }}"
-  tags: backuppc_client
-
-- name: Debug2
-  ansible.builtin.debug:
-    msg: "{{ backuppc_client_item.0.username }} - {{ backuppc_client_item.1 }}"
-  loop: "{{ backuppc_client_mysql_dump | subelements('authorized_keys') }}"
-  loop_control:
-    loop_var: backuppc_client_item
-  when: backuppc_client_mysql_dump is defined
-  tags: backuppc_client
-
 - name: Set up backuppc user MySQL dump authorized_keys
   ansible.posix.authorized_key:
     user: "{{ backuppc_client_item.0.username }}"
@@ -41,7 +27,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0750
+    mode: "0750"
   when:
     - mysql_dump_script is defined
   tags: backuppc_client
@@ -52,7 +38,7 @@
     state: touch
     owner: root
     group: root
-    mode: 0640
+    mode: "0640"
   when:
     - mysql_dump_script is defined
   tags: backuppc_client
