@@ -14,12 +14,12 @@ scripts) so the BackupPC server can pull backups without a password.
 
 ## Supported Platforms ##
 
-* Debian: bookworm, trixie
-* Ubuntu: 20.04+ — `tasks/ubuntu.yml` gates on
-  `ansible_facts['lsb']['major_release'] >= 20`, not a specific
-  release; jammy (22.04), noble (24.04), and resolute (26.04) are
-  what's actually exercised in molecule
-* EL (RHEL/Rocky/AlmaLinux): 8, 9
+* Debian: trixie
+* Ubuntu: 22.04+ — `tasks/ubuntu.yml` gates on
+  `ansible_facts['lsb']['major_release'] >= 20`, a looser check than
+  the supported-platform statement; jammy (22.04), noble (24.04), and
+  resolute (26.04) are what's actually exercised in molecule
+* EL (RHEL/Rocky/AlmaLinux): 9, 10
 
 ## Role Variables ##
 
@@ -27,10 +27,11 @@ scripts) so the BackupPC server can pull backups without a password.
 
 | Variable               | Default                | Description                                                        |
 |-------------------------|-------------------------|----------------------------------------------------------------------|
-| `known_host_keys_dir`   | `{{ playbook_dir }}`   | Where fetched SSH host public keys are written.                    |
-| `ssh_host_pub_keys`     | dsa/rsa/ecdsa/ed25519   | List of `/etc/ssh/*.pub` filenames to consider for known_hosts.    |
 | `backuppc_client_ssh_pubkey_accepted_types` | `+ssh-rsa` | `sshd_config` `PubkeyAcceptedKeyTypes` value (Ubuntu 20.04+). Validated in preflight against `ssh -Q PubkeyAcceptedKeyTypes` on the target host. |
 | `backuppc_client_wrapper_path` | `/usr/local/bin/rsyncbackup-wrapper.sh` | Where the forced-command wrapper script (`files/usr/local/bin/rsyncbackup-wrapper.sh`) is deployed, and what each `backuppc_client` entry's `authorized_keys` `command=` restriction points at. See "The rsyncbackup-wrapper.sh pattern" below. |
+| `backuppc_client_known_hosts_remote_user` | `ansible` | Remote user `tasks/known_hosts.yml` connects to `backuppc_client_known_hosts_server` as. |
+| `backuppc_client_known_hosts_owner` | `backuppc` | Owner set on the BackupPC server's `known_hosts` file. |
+| `backuppc_client_known_hosts_group` | `backuppc` | Group set on the BackupPC server's `known_hosts` file. |
 
 ### `vars/` (OS-specific, loaded via `include_vars` + `first_found`, not user-overridable)
 
@@ -38,7 +39,6 @@ scripts) so the BackupPC server can pull backups without a password.
 |------------------|-----------------------------------|------------------------------------------|
 | `vars/Debian.yml`| `ansible_os_family == 'Debian'`  | `backuppc_client_packages` (adds `pigz`) |
 | `vars/Ubuntu.yml`| `ansible_os_family == 'Debian'` and `ansible_distribution == 'Ubuntu'` | `backuppc_client_packages` (adds `pigz`) |
-| `vars/jammy.yml` | `ansible_distribution_release == 'jammy'` | `backuppc_client_packages` (adds `pigz`) |
 | `vars/RedHat.yml`| `ansible_os_family == 'RedHat'`  | `backuppc_client_packages` (no `pigz`)  |
 | `vars/default.yml`| fallback when nothing else matches | `backuppc_client_packages`            |
 
@@ -55,10 +55,11 @@ scripts) so the BackupPC server can pull backups without a password.
 |-----------------------------------|----------------------------------------------------------------------------|
 | `mysql_dump_script`              | Path to install the MySQL dump script; enables MySQL dump support when set. |
 | `postgres_dump_script`           | Path to install the Postgres dump script; enables Postgres dump support when set. |
-| `postgres_dump_file`             | Source file (under `files/`) for the Postgres dump script.             |
-| `backuppc_ssh_key_scan`          | When defined, runs `tasks/known_hosts.yml` to `ssh-keyscan` the host into the BackupPC server's known_hosts. |
-| `backuppc_client_mysql_dump`     | List of dicts (same shape as `backuppc_client`) for MySQL-dump-specific `authorized_keys`. |
-| `backuppc_client_postgres_dump`  | List of dicts (same shape as `backuppc_client`) for Postgres-dump-specific `authorized_keys`. |
+| `postgres_dump_file`             | Source file (under `files/`) for the Postgres dump script. Required whenever `postgres_dump_script` is set (validated in preflight) — "Copy Postgres dump script" uses it unconditionally. |
+| `backuppc_ssh_key_scan`          | When defined, runs `tasks/known_hosts.yml` to `ssh-keyscan` the host into the BackupPC server's known_hosts. Requires `backuppc_client_known_hosts_server` to also be set (validated in preflight). |
+| `backuppc_client_known_hosts_server` | BackupPC server hostname `tasks/known_hosts.yml` delegates to. Required whenever `backuppc_ssh_key_scan` is set. |
+| `backuppc_client_mysql_dump`     | List of dicts: `username`, `authorized_keys`, `key_options` (all required). Grants MySQL-dump-specific `authorized_keys` — not the same shape as `backuppc_client` (no `home`/`shell`/`deprecated_keys`). |
+| `backuppc_client_postgres_dump`  | Same shape as `backuppc_client_mysql_dump`, for Postgres-dump-specific `authorized_keys`. |
 
 Example `backuppc_client` entry — the common case needs no `key_options`
 at all; the role forces `command=` to `backuppc_client_wrapper_path`
@@ -164,6 +165,9 @@ sudo can corrupt rsync's binary protocol stream.
    * no `backuppc_client`/`backuppc_client_mysql_dump`/
      `backuppc_client_postgres_dump` entry's `authorized_keys` contains
      a DSA (`ssh-dss`) key
+   * `backuppc_client_known_hosts_server` is set whenever
+     `backuppc_ssh_key_scan` is
+   * `postgres_dump_file` is set whenever `postgres_dump_script` is
    * on Ubuntu 20.04+, `backuppc_client_ssh_pubkey_accepted_types` only
      requests key types this host's `ssh -Q PubkeyAcceptedKeyTypes`
      actually recognizes
