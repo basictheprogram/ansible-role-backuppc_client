@@ -9,7 +9,8 @@ galaxy_info:
     Configure a BackupPC client: create the backup user, manage SSH
     authorized_keys for the rsync-over-ssh backup transport, and
     configure sudoers.d rules for rsync/MySQL-dump/Postgres-dump, for
-    Debian (bookworm, trixie), Ubuntu (20.04+), and EL (8, 9) hosts.
+    Debian (trixie), Ubuntu (jammy, noble, resolute), and EL (9, 10)
+    hosts.
   company: Real Time Enterprises, Inc.
   license: MIT
   min_ansible_version: "2.20"
